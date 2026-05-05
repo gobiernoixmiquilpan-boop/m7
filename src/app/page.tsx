@@ -6,7 +6,7 @@ import {
   Info, Home as HomeIcon, CreditCard, MapPin,
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
   ChevronDown, CheckCircle, ImageIcon, Loader2, ShieldCheck,
-  ChevronLeft, ExternalLink,
+  ChevronLeft, ExternalLink, Wifi,
 } from "lucide-react";
 
 interface FormData {
@@ -29,7 +29,45 @@ interface FormData {
 
 const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
 const DRAFT_KEY   = "capula-draft";
+const PENDING_KEY = "capula-pending";
 const TOTAL_STEPS = 7;
+
+const getDB = async () => {
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    const req = indexedDB.open("capula-forms", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("photos");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const savePhoto = async (key: string, file: File) => {
+  try {
+    const db = await getDB();
+    const tx = db.transaction("photos", "readwrite");
+    tx.objectStore("photos").put(file, key);
+    await new Promise((r, e) => { tx.oncomplete = r; tx.onerror = e; });
+  } catch { /* noop */ }
+};
+
+const getPhoto = async (key: string): Promise<File | null> => {
+  try {
+    const db = await getDB();
+    const tx = db.transaction("photos", "readonly");
+    return await new Promise((r) => {
+      const req = tx.objectStore("photos").get(key);
+      req.onsuccess = () => r(req.result ?? null);
+    });
+  } catch { return null; }
+};
+
+const deletePhoto = async (key: string) => {
+  try {
+    const db = await getDB();
+    const tx = db.transaction("photos", "readwrite");
+    tx.objectStore("photos").delete(key);
+  } catch { /* noop */ }
+};
 
 type DraftFields = Omit<FormData, "fotoCasa" | "fotoINEFrente" | "fotoINEAtras">;
 
@@ -95,9 +133,11 @@ export default function Home() {
   const [geoLoading,  setGeoLoading]  = useState(false);
   const [geoError,    setGeoError]    = useState<string | null>(null);
   const [showSaved,   setShowSaved]   = useState(false);
+  const [offline,     setOffline]     = useState(false);
 
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Draft save ── */
   useEffect(() => {
@@ -114,9 +154,31 @@ export default function Home() {
     } catch { /* noop */ }
   }, [form]);
 
+  /* ── Connection monitoring & retry ── */
+  useEffect(() => {
+    const handleOnline = () => {
+      setOffline(false);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(() => {
+        const pending = sessionStorage.getItem(PENDING_KEY);
+        if (pending) retryPendingSubmission();
+      }, 500);
+    };
+    const handleOffline = () => setOffline(true);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
+  }, []);
+
   function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file) return;
     setForm((p) => ({ ...p, [field]: file }));
+    savePhoto(field, file);
     setPreviews((p) => {
       if (p[field]) URL.revokeObjectURL(p[field]!);
       return { ...p, [field]: URL.createObjectURL(file) };
@@ -160,10 +222,51 @@ export default function Home() {
       if (!res.ok) throw new Error();
       const data = await res.json() as { id: string };
       localStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(PENDING_KEY);
       setSubmittedId(data.id);
       setSubmitted(true);
     } catch {
-      alert("No se pudo enviar. Verifique su conexión e intente de nuevo.");
+      try {
+        const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
+        sessionStorage.setItem(PENDING_KEY, JSON.stringify({ draft, fotoCasa: fotoCasa?.name, fotoINEFrente: a?.name, fotoINEAtras: b?.name }));
+      } catch { /* noop */ }
+      alert("No se pudo enviar. Se reintentará cuando recuperes conexión.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function retryPendingSubmission() {
+    const pending = sessionStorage.getItem(PENDING_KEY);
+    if (!pending) return;
+
+    setLoading(true);
+    try {
+      const data = JSON.parse(pending);
+      const fd = new FormData();
+      Object.entries(data.draft).forEach(([k, v]) => {
+        if (v !== null && v !== undefined) fd.append(k, String(v));
+      });
+
+      const fotoCasa = await getPhoto("fotoCasa");
+      const fotoINEFrente = await getPhoto("fotoINEFrente");
+      const fotoINEAtras = await getPhoto("fotoINEAtras");
+      if (fotoCasa) fd.append("fotoCasa", fotoCasa);
+      if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
+      if (fotoINEAtras) fd.append("fotoINEAtras", fotoINEAtras);
+
+      const res = await fetch("/api/submissions", { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      const result = await res.json() as { id: string };
+      localStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(PENDING_KEY);
+      await deletePhoto("fotoCasa");
+      await deletePhoto("fotoINEFrente");
+      await deletePhoto("fotoINEAtras");
+      setSubmittedId(result.id);
+      setSubmitted(true);
+    } catch {
+      // Seguirá reintentando cuando vuelva conexión
     } finally {
       setLoading(false);
     }
@@ -267,6 +370,11 @@ export default function Home() {
             {showSaved && (
               <span className="text-[10px] text-guinda-300 font-medium flex items-center gap-1 shrink-0 animate-pulse">
                 <Check className="w-3 h-3" strokeWidth={2.5} /> Guardado
+              </span>
+            )}
+            {offline && (
+              <span className="text-[10px] text-yellow-300 font-medium flex items-center gap-1 shrink-0 animate-pulse">
+                <Wifi className="w-3 h-3" strokeWidth={2.5} /> Sin conexión
               </span>
             )}
           </div>
