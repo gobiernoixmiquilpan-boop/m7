@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
-  Landmark, Info, Home as HomeIcon, CreditCard, MapPin,
+  Info, Home as HomeIcon, CreditCard, MapPin,
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
   ChevronDown, CheckCircle, ImageIcon, Loader2, ShieldCheck,
   ChevronLeft, ExternalLink,
@@ -255,8 +255,8 @@ export default function Home() {
       <header className="bg-guinda-800 rounded-b-[2rem] shadow-lg">
         <div className="max-w-2xl mx-auto px-5 pt-6 pb-5">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-              <Landmark className="w-5 h-5 text-white" strokeWidth={1.5} />
+            <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">
+              <Image src="/logo.svg" alt="RegulaTierra logo" width={32} height={32} priority />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-guinda-200 text-[11px] font-semibold uppercase tracking-widest leading-none">

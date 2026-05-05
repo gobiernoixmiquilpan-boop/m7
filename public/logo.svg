@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Tejado / roof -->
+  <path d="M24 6 L42 22 L37 22 L37 40 L11 40 L11 22 L6 22 Z"
+        stroke="white" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Puerta / door -->
+  <path d="M20 31 L20 40 L28 40 L28 31 Q24 27 20 31 Z"
+        stroke="white" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+  <!-- Ventana izquierda / left window -->
+  <rect x="13" y="25" width="5.5" height="4.5" rx="0.8"
+        stroke="white" stroke-width="1.6" fill="none"/>
+  <!-- Ventana derecha / right window -->
+  <rect x="29.5" y="25" width="5.5" height="4.5" rx="0.8"
+        stroke="white" stroke-width="1.6" fill="none"/>
+  <!-- Líneas de parcela / plot lines -->
+  <line x1="5" y1="43" x2="43" y2="43" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="9" y1="46.5" x2="39" y2="46.5" stroke="white" stroke-width="1.1" stroke-linecap="round" opacity="0.5"/>
+</svg>
