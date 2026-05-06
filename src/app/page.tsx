@@ -71,6 +71,7 @@ const deletePhoto = async (key: string) => {
 };
 
 type DraftFields = Omit<FormData, "fotoCasa" | "fotoINEFrente" | "fotoINEAtras">;
+type QueueItem   = { tempId: string; draft: DraftFields };
 
 const STEP_TITLES = [
   "Foto de la casa",
@@ -153,8 +154,16 @@ export default function Home() {
     return emptyForm;
   });
   const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null });
-  const [submitted,   setSubmitted]   = useState(false);
-  const [submittedId, setSubmittedId] = useState("");
+  const [submitted,        setSubmitted]        = useState(false);
+  const [submittedId,      setSubmittedId]      = useState("");
+  const [submittedOffline, setSubmittedOffline] = useState(false);
+  const [pendingCount,     setPendingCount]     = useState(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const q = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]") as unknown[];
+      return Array.isArray(q) ? q.length : 0;
+    } catch { return 0; }
+  });
   const [loading,     setLoading]     = useState(false);
   const [errors,      setErrors]      = useState<Partial<Record<keyof FormData, string>>>({});
   const [geoLoading,  setGeoLoading]  = useState(false);
@@ -186,10 +195,7 @@ export default function Home() {
     const handleOnline = () => {
       setOffline(false);
       if (retryTimer.current) clearTimeout(retryTimer.current);
-      retryTimer.current = setTimeout(() => {
-        const pending = sessionStorage.getItem(PENDING_KEY);
-        if (pending) retryPendingSubmission();
-      }, 500);
+      retryTimer.current = setTimeout(() => drainQueue(), 500);
     };
     const handleOffline = () => setOffline(true);
 
@@ -200,7 +206,12 @@ export default function Home() {
       window.removeEventListener("offline", handleOffline);
       if (retryTimer.current) clearTimeout(retryTimer.current);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Drain queue on mount if already online ── */
+  useEffect(() => {
+    if (navigator.onLine) drainQueue();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file) return;
@@ -250,58 +261,70 @@ export default function Home() {
       if (!res.ok) throw new Error();
       const data = await res.json() as { id: string };
       localStorage.removeItem(DRAFT_KEY);
-      sessionStorage.removeItem(PENDING_KEY);
       setSubmittedId(data.id);
       setSubmitted(true);
+      void drainQueue(); // envía en segundo plano cualquier otra solicitud en cola
     } catch {
+      // Sin conexión: guardar en la cola persistente
+      const tempId = `q${Date.now()}`;
+      const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
       try {
-        const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
-        sessionStorage.setItem(PENDING_KEY, JSON.stringify({ draft, fotoCasa: fotoCasa?.name, fotoINEFrente: a?.name, fotoINEAtras: b?.name }));
+        if (fotoCasa) await savePhoto(`${tempId}_fotoCasa`, fotoCasa);
+        if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
+        if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
+        const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
+        queue.push({ tempId, draft });
+        localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
+        setPendingCount(queue.length);
       } catch { /* noop */ }
-      alert("No se pudo enviar. Se reintentará cuando recuperes conexión.");
+      localStorage.removeItem(DRAFT_KEY);
+      setSubmittedOffline(true);
+      setSubmitted(true);
     } finally {
       setLoading(false);
     }
   }
 
-  async function retryPendingSubmission() {
-    const pending = sessionStorage.getItem(PENDING_KEY);
-    if (!pending) return;
+  async function drainQueue() {
+    let queue: QueueItem[] = [];
+    try { queue = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]"); } catch { return; }
+    if (queue.length === 0) return;
 
-    setLoading(true);
-    try {
-      const data = JSON.parse(pending);
-      const fd = new FormData();
-      Object.entries(data.draft).forEach(([k, v]) => {
-        if (v !== null && v !== undefined) fd.append(k, String(v));
-      });
+    const remaining: QueueItem[] = [];
+    for (const item of queue) {
+      try {
+        const fd = new FormData();
+        Object.entries(item.draft).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) fd.append(k, String(v));
+        });
+        const fotoCasa      = await getPhoto(`${item.tempId}_fotoCasa`);
+        const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
+        const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
+        if (fotoCasa)      fd.append("fotoCasa",      fotoCasa);
+        if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
+        if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
 
-      const fotoCasa = await getPhoto("fotoCasa");
-      const fotoINEFrente = await getPhoto("fotoINEFrente");
-      const fotoINEAtras = await getPhoto("fotoINEAtras");
-      if (fotoCasa) fd.append("fotoCasa", fotoCasa);
-      if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
-      if (fotoINEAtras) fd.append("fotoINEAtras", fotoINEAtras);
+        const res = await fetch("/api/submissions", { method: "POST", body: fd });
+        if (!res.ok) throw new Error();
 
-      const res = await fetch("/api/submissions", { method: "POST", body: fd });
-      if (!res.ok) throw new Error();
-      const result = await res.json() as { id: string };
-      localStorage.removeItem(DRAFT_KEY);
-      sessionStorage.removeItem(PENDING_KEY);
-      await deletePhoto("fotoCasa");
-      await deletePhoto("fotoINEFrente");
-      await deletePhoto("fotoINEAtras");
-      setSubmittedId(result.id);
-      setSubmitted(true);
-    } catch {
-      // Seguirá reintentando cuando vuelva conexión
-    } finally {
-      setLoading(false);
+        await deletePhoto(`${item.tempId}_fotoCasa`);
+        await deletePhoto(`${item.tempId}_fotoINEFrente`);
+        await deletePhoto(`${item.tempId}_fotoINEAtras`);
+      } catch {
+        remaining.push(item);
+      }
     }
+
+    if (remaining.length === 0) {
+      localStorage.removeItem(PENDING_KEY);
+    } else {
+      localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
+    }
+    setPendingCount(remaining.length);
   }
 
   function reset() {
-    setSubmitted(false); setSubmittedId(""); setStep(1);
+    setSubmitted(false); setSubmittedId(""); setSubmittedOffline(false); setStep(1);
     setForm(emptyForm);
     setPreviews((p) => {
       if (p.fotoCasa)      URL.revokeObjectURL(p.fotoCasa);
@@ -342,9 +365,49 @@ export default function Home() {
     );
   }
 
-  /* ══ Pantalla de éxito ══ */
+  /* ══ Pantalla de éxito — sin conexión ══ */
+  if (submitted && submittedOffline) {
+    return (
+      <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
+        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-guinda-100 flex items-center justify-center overflow-hidden shrink-0">
+              <Image src="/logo.svg" alt="RegulaTierra" width={22} height={22} />
+            </div>
+            <span className="text-[11px] text-guinda-600 font-bold uppercase tracking-widest">RegulaTierra</span>
+          </div>
+          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <Wifi className="w-10 h-10 text-yellow-500" strokeWidth={1.5} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-1">Solicitud guardada</h2>
+          <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+            Sin conexión — los datos se enviarán <strong>automáticamente</strong> al recuperar señal.
+          </p>
+          {pendingCount > 1 && (
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3">
+              <p className="text-xs text-yellow-700 font-medium">
+                {pendingCount} solicitudes en cola de envío
+              </p>
+            </div>
+          )}
+          <div className="mt-4 flex items-start gap-2 bg-guinda-50 border border-guinda-100 rounded-xl px-4 py-3">
+            <ShieldCheck className="w-4 h-4 text-guinda-600 shrink-0 mt-px" strokeWidth={2} />
+            <p className="text-xs text-guinda-700 font-medium text-left">
+              No cierres la aplicación. Cuando haya señal se enviará en segundo plano.
+            </p>
+          </div>
+          <button onClick={reset}
+            className="mt-5 w-full bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white px-6 py-3.5 rounded-2xl font-semibold transition-all">
+            Registrar otra persona
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  /* ══ Pantalla de éxito — con conexión ══ */
   if (submitted) {
-    const folioNum = `CAP-2026-${submittedId.slice(-4)}`;
+    const folioNum = `CAP-2026-${submittedId.slice(-4).toUpperCase()}`;
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center">
@@ -429,6 +492,16 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* ── Banner cola pendiente ── */}
+      {pendingCount > 0 && !offline && (
+        <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 flex items-center gap-2">
+          <Check className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2.5} />
+          <p className="text-xs text-emerald-800 font-medium">
+            Enviando {pendingCount} solicitud{pendingCount > 1 ? "es" : ""} guardada{pendingCount > 1 ? "s" : ""}…
+          </p>
+        </div>
+      )}
 
       {/* ── Banner offline ── */}
       {offline && (
