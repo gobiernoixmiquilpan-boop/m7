@@ -1,8 +1,22 @@
+import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle, Clock, AlertCircle, XCircle, Search, ChevronLeft, Info } from "lucide-react";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ folio: string }>;
+}): Promise<Metadata> {
+  const { folio } = await params;
+  const clean = folio.toUpperCase();
+  return {
+    title: `${clean} · Consultar solicitud`,
+    description: `Consulta el estado de la solicitud ${clean} de regularización de tierras — Capula 2026.`,
+  };
+}
 
 const STATUS_MAP = {
   pendiente: {

@@ -20,7 +20,7 @@ function validatePost(fd: FormData): string | null {
   if (!COMUNIDADES_VALIDAS.includes(comunidad))            return "comunidad inválida";
   if (!ubicacion)                                          return "ubicacion requerida";
   if (!/^\d{10}$/.test(celular))                          return "celular inválido (10 dígitos)";
-  if (curp.length !== 18)                                  return "CURP inválida (18 caracteres)";
+  if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curp)) return "CURP inválida";
   if (!predio)                                             return "predio requerido";
   if (!lote)                                               return "lote requerido";
   if (!["riego", "temporal"].includes(tipoTierra))         return "tipoTierra inválido";

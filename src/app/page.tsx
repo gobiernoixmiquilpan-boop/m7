@@ -102,8 +102,8 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!f.fotoINEAtras)  e.fotoINEAtras  = "Requerido";
   }
   if (step === 5) {
-    if (!/^\d{10}$/.test(f.celular)) e.celular = "Debe tener 10 dígitos";
-    if (f.curp.length !== 18)        e.curp    = "La CURP debe tener 18 caracteres";
+    if (!/^\d{10}$/.test(f.celular))                              e.celular = "Debe tener 10 dígitos";
+    if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(f.curp)) e.curp    = "CURP inválida";
   }
   if (step === 6) {
     if (!f.predio.trim())    e.predio    = "Requerido";
@@ -261,6 +261,9 @@ export default function Home() {
       if (!res.ok) throw new Error();
       const data = await res.json() as { id: string };
       localStorage.removeItem(DRAFT_KEY);
+      await deletePhoto("fotoCasa");
+      await deletePhoto("fotoINEFrente");
+      await deletePhoto("fotoINEAtras");
       setSubmittedId(data.id);
       setSubmitted(true);
       void drainQueue(); // envía en segundo plano cualquier otra solicitud en cola

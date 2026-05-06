@@ -402,7 +402,7 @@ export default function AdminPage() {
   function exportCSV() {
     const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Lote",
       "Tipo", "Superficie (ha)", "Dialecto ñhañhu", "Estado", "Ubicación", "Fecha"];
-    const rows = submissions.map((s) => [
+    const rows = filtered.map((s) => [
       folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio, s.lote,
       s.tipoTierra, s.superficie, s.hablaDialecto, statusLabel(s.status), s.ubicacion,
       new Date(s.timestamp).toLocaleDateString("es-MX"),
@@ -465,6 +465,9 @@ export default function AdminPage() {
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
           <ChevronLeft className="w-5 h-5" strokeWidth={2} />
         </Link>
+        <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center overflow-hidden shrink-0">
+          <Image src="/logo.svg" alt="RegulaTierra" width={26} height={26} />
+        </div>
         <div className="flex-1 min-w-0">
           <h1 className="font-bold text-base leading-none">Panel Administrativo</h1>
           <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
@@ -497,6 +500,23 @@ export default function AdminPage() {
           <StatCard label="Sup. promedio" value={`${avgSup} ha`}
             icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
         </div>
+
+        {/* Estadísticas por estado */}
+        {total > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {STATUS_OPTIONS.map((o) => {
+              const count = submissions.filter(
+                (s) => (s.status ?? "pendiente") === o.value
+              ).length;
+              return (
+                <div key={o.value} className={`rounded-2xl px-4 py-3 border border-black/5 ${o.cls}`}>
+                  <p className="text-2xl font-bold">{count}</p>
+                  <p className="text-xs font-semibold opacity-70 mt-0.5">{o.label}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5">
