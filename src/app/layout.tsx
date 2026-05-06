@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PwaRegister from "@/components/PwaRegister";
+import FormErrorBoundary from "@/components/FormErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
   title: "Regularización de Tierras · Capula",
   description:
     "Solicitud de regularización de tierras — Contraloría Municipal de Ixmiquilpan",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -43,7 +48,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <PwaRegister />
-        {children}
+        <FormErrorBoundary>
+          {children}
+        </FormErrorBoundary>
       </body>
     </html>
   );

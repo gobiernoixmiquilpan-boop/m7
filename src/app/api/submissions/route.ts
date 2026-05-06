@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuth } from "@/lib/auth";
 
+const COMUNIDADES_VALIDAS = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
+
+function validatePost(fd: FormData): string | null {
+  const nombreCompleto = (fd.get("nombreCompleto") as string | null)?.trim() ?? "";
+  const comunidad      = (fd.get("comunidad")      as string | null) ?? "";
+  const ubicacion      = (fd.get("ubicacion")      as string | null)?.trim() ?? "";
+  const celular        = (fd.get("celular")        as string | null) ?? "";
+  const curp           = (fd.get("curp")           as string | null)?.trim() ?? "";
+  const predio         = (fd.get("predio")         as string | null)?.trim() ?? "";
+  const lote           = (fd.get("lote")           as string | null)?.trim() ?? "";
+  const tipoTierra     = (fd.get("tipoTierra")     as string | null) ?? "";
+  const superficie     = (fd.get("superficie")     as string | null) ?? "";
+  const hablaDialecto  = (fd.get("hablaDialecto")  as string | null) ?? "";
+
+  if (!nombreCompleto)                                     return "nombreCompleto requerido";
+  if (!COMUNIDADES_VALIDAS.includes(comunidad))            return "comunidad inválida";
+  if (!ubicacion)                                          return "ubicacion requerida";
+  if (!/^\d{10}$/.test(celular))                          return "celular inválido (10 dígitos)";
+  if (curp.length !== 18)                                  return "CURP inválida (18 caracteres)";
+  if (!predio)                                             return "predio requerido";
+  if (!lote)                                               return "lote requerido";
+  if (!["riego", "temporal"].includes(tipoTierra))         return "tipoTierra inválido";
+  if (!superficie || isNaN(parseFloat(superficie)) || parseFloat(superficie) <= 0) return "superficie inválida";
+  if (!["si", "no"].includes(hablaDialecto))               return "hablaDialecto inválido";
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   if (!isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { data, error } = await supabase
@@ -14,9 +41,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const fd = await req.formData();
+
+  const validationError = validatePost(fd);
+  if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
+
   const latRaw = fd.get("lat") as string | null;
   const lngRaw = fd.get("lng") as string | null;
-  const id = Date.now().toString();
+  const id = crypto.randomUUID();
 
   const entry: Record<string, unknown> = {
     id,

@@ -64,6 +64,32 @@ function folio(id: string) {
   return `CAP-2026-${id.slice(-4)}`;
 }
 
+/* ──────────────────── Delete confirm modal ──────────────────── */
+function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center">
+        <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Trash2 className="w-7 h-7 text-red-600" strokeWidth={1.5} />
+        </div>
+        <h3 className="font-bold text-gray-800 text-base mb-1">¿Eliminar registro?</h3>
+        <p className="text-sm text-gray-500 mb-5">Esta acción no se puede deshacer.</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:border-gray-300 transition-all">
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ──────────────────── Login ──────────────────── */
 function LoginScreen({ pw, setPw, onLogin, loading }: {
   pw: string; setPw: (v: string) => void; onLogin: () => void; loading: boolean;
@@ -71,8 +97,8 @@ function LoginScreen({ pw, setPw, onLogin, loading }: {
   return (
     <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
       <div className="bg-white rounded-3xl shadow-xl p-8 max-w-xs w-full text-center">
-        <div className="w-16 h-16 bg-guinda-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <FileText className="w-8 h-8 text-guinda-700" strokeWidth={1.5} />
+        <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center mx-auto mb-5 bg-guinda-100">
+          <Image src="/logo.svg" alt="RegulaTierra" width={40} height={40} />
         </div>
         <h1 className="text-xl font-bold text-guinda-800 mb-1">Panel Administrativo</h1>
         <p className="text-gray-400 text-sm mb-6">Regularización de Tierras · Capula 2026</p>
@@ -117,7 +143,7 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
   s: Submission;
   onClose: () => void;
   onStatusChange: (id: string, status: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: string) => void;
 }) {
   const [status, setStatus]   = useState(s.status ?? "pendiente");
   const [saving, setSaving]   = useState(false);
@@ -251,6 +277,7 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
             <Trash2 className="w-4 h-4" strokeWidth={2} /> Eliminar registro
           </button>
         </div>
+
       </div>
     </div>
   );
@@ -283,8 +310,10 @@ export default function AdminPage() {
   const [loading,         setLoading]         = useState(false);
   const [search,          setSearch]          = useState("");
   const [filterComunidad, setFilterComunidad] = useState("");
+  const [filterStatus,    setFilterStatus]    = useState("");
   const [page,            setPage]            = useState(1);
   const [selected,        setSelected]        = useState<Submission | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [activeTab,       setActiveTab]       = useState<"mapa" | "graficas" | "tabla">("tabla");
   const [mountedTabs, setMountedTabs] = useState(new Set<string>(["tabla"]));
 
@@ -349,7 +378,6 @@ export default function AdminPage() {
   }
 
   async function deleteRow(id: string) {
-    if (!confirm("¿Eliminar este registro?")) return;
     const res = await fetch("/api/submissions", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -414,12 +442,14 @@ export default function AdminPage() {
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .filter((s) => {
       if (filterComunidad && s.comunidad !== filterComunidad) return false;
+      if (filterStatus && s.status !== filterStatus) return false;
       if (!search) return true;
       const q = search.toLowerCase();
       return (
         s.nombreCompleto.toLowerCase().includes(q) ||
         s.comunidad.toLowerCase().includes(q) ||
-        s.curp.toLowerCase().includes(q)
+        s.curp.toLowerCase().includes(q) ||
+        folio(s.id).toLowerCase().includes(q)
       );
     });
 
@@ -439,15 +469,15 @@ export default function AdminPage() {
           <h1 className="font-bold text-base leading-none">Panel Administrativo</h1>
           <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
         </div>
-        <button onClick={fetchData} title="Actualizar"
+        <button onClick={fetchData} title="Actualizar" aria-label="Actualizar registros"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
         </button>
-        <button onClick={exportCSV} title="Exportar CSV"
+        <button onClick={exportCSV} title="Exportar CSV" aria-label="Exportar a CSV"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <Download className="w-4 h-4" strokeWidth={2} />
         </button>
-        <button onClick={logout} title="Salir"
+        <button onClick={logout} title="Salir" aria-label="Cerrar sesión"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <LogOut className="w-4 h-4" strokeWidth={2} />
         </button>
@@ -571,6 +601,15 @@ export default function AdminPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
                 </div>
+                <div className="relative">
+                  <select value={filterStatus}
+                    onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                    className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
+                    <option value="">Todos los estados</option>
+                    {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+                </div>
                 <span className="text-xs text-gray-400 shrink-0">
                   {filtered.length} registro{filtered.length !== 1 ? "s" : ""}
                 </span>
@@ -644,7 +683,15 @@ export default function AdminPage() {
           s={selected}
           onClose={() => setSelected(null)}
           onStatusChange={updateStatus}
-          onDelete={async (id) => { await deleteRow(id); }}
+          onDelete={(id) => setDeleteConfirmId(id)}
+        />
+      )}
+
+      {/* Modal de confirmación de eliminación */}
+      {deleteConfirmId && (
+        <DeleteConfirmModal
+          onConfirm={async () => { await deleteRow(deleteConfirmId); setDeleteConfirmId(null); }}
+          onCancel={() => setDeleteConfirmId(null)}
         />
       )}
     </div>

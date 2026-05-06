@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Info, Home as HomeIcon, CreditCard, MapPin,
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
   ChevronDown, CheckCircle, ImageIcon, Loader2, ShieldCheck,
-  ChevronLeft, ExternalLink, Wifi,
+  ChevronLeft, ExternalLink, Wifi, Search,
 } from "lucide-react";
 
 interface FormData {
@@ -29,7 +30,7 @@ interface FormData {
 
 const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
 const DRAFT_KEY   = "capula-draft";
-const PENDING_KEY = "capula-pending";
+const PENDING_KEY = "capula-pending-queue";
 const TOTAL_STEPS = 7;
 
 const getDB = async () => {
@@ -113,6 +114,32 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
   return e;
 }
 
+async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round(height * (maxWidth / width));
+        width = maxWidth;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file),
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 /* ═══════════════════════════════════════════════════════ */
 
 export default function Home() {
@@ -175,13 +202,14 @@ export default function Home() {
     };
   }, []);
 
-  function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
+  async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file) return;
-    setForm((p) => ({ ...p, [field]: file }));
-    savePhoto(field, file);
+    const compressed = await compressImage(file);
+    setForm((p) => ({ ...p, [field]: compressed }));
+    savePhoto(field, compressed);
     setPreviews((p) => {
       if (p[field]) URL.revokeObjectURL(p[field]!);
-      return { ...p, [field]: URL.createObjectURL(file) };
+      return { ...p, [field]: URL.createObjectURL(compressed) };
     });
     setErrors((p) => ({ ...p, [field]: undefined }));
   }
@@ -320,6 +348,12 @@ export default function Home() {
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-guinda-100 flex items-center justify-center overflow-hidden shrink-0">
+              <Image src="/logo.svg" alt="RegulaTierra" width={22} height={22} />
+            </div>
+            <span className="text-[11px] text-guinda-600 font-bold uppercase tracking-widest">RegulaTierra</span>
+          </div>
           <div className="w-20 h-20 bg-guinda-100 rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle className="w-10 h-10 text-guinda-700" strokeWidth={1.5} />
           </div>
@@ -341,6 +375,10 @@ export default function Home() {
               Toma una captura de pantalla de este comprobante.
             </p>
           </div>
+          <Link href={`/consulta/${`CAP-2026-${submittedId.slice(-4).toUpperCase()}`}`}
+            className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-sm font-semibold py-3 rounded-2xl transition-all">
+            <Search className="w-4 h-4" strokeWidth={2} /> Ver estado de mi solicitud
+          </Link>
           <button onClick={reset}
             className="mt-5 w-full bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white px-6 py-3.5 rounded-2xl font-semibold transition-all">
             Nueva solicitud
@@ -373,9 +411,7 @@ export default function Home() {
               </span>
             )}
             {offline && (
-              <span className="text-[10px] text-yellow-300 font-medium flex items-center gap-1 shrink-0 animate-pulse">
-                <Wifi className="w-3 h-3" strokeWidth={2.5} /> Sin conexión
-              </span>
+              <Wifi className="w-4 h-4 text-yellow-300 shrink-0 animate-pulse" strokeWidth={2.5} />
             )}
           </div>
 
@@ -394,8 +430,18 @@ export default function Home() {
         </div>
       </header>
 
+      {/* ── Banner offline ── */}
+      {offline && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2.5 flex items-center gap-2">
+          <Wifi className="w-4 h-4 text-yellow-600 shrink-0" strokeWidth={2} />
+          <p className="text-xs text-yellow-800 font-medium">
+            Sin conexión — tus datos están guardados y se enviarán cuando recuperes señal.
+          </p>
+        </div>
+      )}
+
       {/* ── Contenido del paso ── */}
-      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
+      <div key={step} className="max-w-2xl mx-auto px-4 pt-5 space-y-4 step-animate">
 
         {/* PASO 1 · Foto de la casa */}
         {step === 1 && (
