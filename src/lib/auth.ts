@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-export function isAdminAuth(req: NextRequest): boolean {
+export async function isAdminAuth(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get("admin_token")?.value;
-  const expected = Buffer.from(process.env.ADMIN_PASS ?? "capula2026").toString("base64");
-  return token === expected;
+  if (!token) return false;
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  return !error && !!user;
 }

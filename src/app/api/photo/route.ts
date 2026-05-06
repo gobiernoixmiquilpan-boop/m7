@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuth } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  if (!isAdminAuth(req)) return new NextResponse(null, { status: 401 });
+  if (!await isAdminAuth(req)) return new NextResponse(null, { status: 401 });
   const p = req.nextUrl.searchParams.get("p");
   if (!p) return new NextResponse(null, { status: 400 });
   const { data, error } = await supabase.storage.from("solicitudes").createSignedUrl(p, 3600);

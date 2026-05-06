@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
-  const { password } = await req.json() as { password: string };
-  const valid = password === (process.env.ADMIN_PASS ?? "capula2026");
-  if (!valid) return NextResponse.json({ ok: false }, { status: 401 });
-  const token = Buffer.from(process.env.ADMIN_PASS ?? "capula2026").toString("base64");
+  const { email, password } = await req.json() as { email: string; password: string };
+  if (!email || !password) return NextResponse.json({ ok: false }, { status: 400 });
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.session) return NextResponse.json({ ok: false }, { status: 401 });
+
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("admin_token", token, {
+  res.cookies.set("admin_token", data.session.access_token, {
     httpOnly: true,
     sameSite: "strict",
     path: "/",

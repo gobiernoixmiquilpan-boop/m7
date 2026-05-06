@@ -91,8 +91,10 @@ function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; on
 }
 
 /* ──────────────────── Login ──────────────────── */
-function LoginScreen({ pw, setPw, onLogin, loading }: {
-  pw: string; setPw: (v: string) => void; onLogin: () => void; loading: boolean;
+function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error }: {
+  email: string; setEmail: (v: string) => void;
+  pw: string; setPw: (v: string) => void;
+  onLogin: () => void; loading: boolean; error: boolean;
 }) {
   return (
     <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
@@ -102,12 +104,21 @@ function LoginScreen({ pw, setPw, onLogin, loading }: {
         </div>
         <h1 className="text-xl font-bold text-guinda-800 mb-1">Panel Administrativo</h1>
         <p className="text-gray-400 text-sm mb-6">Regularización de Tierras · Capula 2026</p>
-        <input
-          type="password" placeholder="Contraseña" value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onLogin()}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
-        />
+        <div className="space-y-3 mb-4 text-left">
+          <input
+            type="email" placeholder="Correo electrónico" value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onLogin()}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
+          />
+          <input
+            type="password" placeholder="Contraseña" value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onLogin()}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
+          />
+        </div>
+        {error && <p className="text-xs text-red-500 mb-3">Correo o contraseña incorrectos.</p>}
         <button onClick={onLogin} disabled={loading}
           className="w-full bg-guinda-700 hover:bg-guinda-800 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
           {loading && <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />}
@@ -304,8 +315,10 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
 /* ──────────────────── Admin principal ──────────────────── */
 export default function AdminPage() {
   const [authed,          setAuthed]          = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") === "1");
+  const [email,           setEmail]           = useState("");
   const [pw,              setPw]              = useState("");
   const [loginLoading,    setLoginLoading]    = useState(false);
+  const [loginError,      setLoginError]      = useState(false);
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
   const [loading,         setLoading]         = useState(false);
   const [search,          setSearch]          = useState("");
@@ -350,21 +363,23 @@ export default function AdminPage() {
   async function login() {
     if (loginLoading) return;
     setLoginLoading(true);
+    setLoginError(false);
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw }),
+        body: JSON.stringify({ email, password: pw }),
       });
       if (res.ok) {
         sessionStorage.setItem("admin-ok", "1");
         setAuthed(true);
         fetchData();
       } else {
-        alert("Contraseña incorrecta");
+        setLoginError(true);
+        setPw("");
       }
     } catch {
-      alert("Error de conexión. Verifique su red.");
+      setLoginError(true);
     } finally {
       setLoginLoading(false);
     }
@@ -417,7 +432,7 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (!authed) return <LoginScreen pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} />;
+  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} />;
 
   /* ── Stats ── */
   const total    = submissions.length;

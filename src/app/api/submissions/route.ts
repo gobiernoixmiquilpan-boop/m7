@@ -30,7 +30,7 @@ function validatePost(fd: FormData): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!await isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { data, error } = await supabase
     .from("submissions")
     .select("*")
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!await isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { id, status } = await req.json() as { id: string; status: string };
   const { error } = await supabase.from("submissions").update({ status }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -98,7 +98,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!await isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { id } = await req.json() as { id: string };
   const { data: files } = await supabase.storage.from("solicitudes").list(id);
   if (files && files.length > 0) {
