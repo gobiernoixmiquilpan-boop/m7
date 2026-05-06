@@ -522,6 +522,19 @@ export default function Home() {
         {/* PASO 1 · Foto de la casa */}
         {step === 1 && (
           <>
+            {/* Acceso rápido a consulta de folio */}
+            <Link href="/consulta"
+              className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3.5 shadow-sm hover:border-guinda-200 hover:bg-guinda-50/40 transition-all group">
+              <div className="w-9 h-9 rounded-xl bg-guinda-100 flex items-center justify-center shrink-0">
+                <Search className="w-4 h-4 text-guinda-600" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-700 leading-none">¿Ya tienes una solicitud?</p>
+                <p className="text-xs text-gray-400 mt-0.5">Consulta el estado con tu número de folio</p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-gray-300 -rotate-90 shrink-0 group-hover:text-guinda-400 transition-colors" strokeWidth={2} />
+            </Link>
+
             <div className="flex items-start gap-2.5 bg-guinda-50 border border-guinda-100 rounded-2xl px-4 py-3">
               <Info className="w-4 h-4 text-guinda-500 mt-px shrink-0" strokeWidth={2} />
               <p className="text-xs text-guinda-800 leading-relaxed">
@@ -735,9 +748,13 @@ export default function Home() {
             </button>
           )}
         </div>
-        <p className="text-center text-[10px] text-gray-400 mt-2">
-          Contraloría Municipal de Ixmiquilpan · Información oficial
-        </p>
+        <div className="flex items-center justify-center gap-3 mt-2">
+          <p className="text-[10px] text-gray-400">Contraloría Municipal de Ixmiquilpan</p>
+          <span className="text-gray-300 text-[10px]">·</span>
+          <Link href="/consulta" className="text-[10px] text-guinda-600 font-medium hover:text-guinda-800">
+            Consultar folio
+          </Link>
+        </div>
       </div>
     </div>
   );
