@@ -185,6 +185,7 @@ export default function Home() {
 
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stepDir       = useRef<"forward" | "back">("forward");
   const retryTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Draft save ── */
@@ -267,12 +268,14 @@ export default function Home() {
     const e = validateStep(step, form);
     if (Object.keys(e).length > 0) { setErrors(e); return; }
     setErrors({});
+    stepDir.current = "forward";
     setStep((s) => s + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function prevStep() {
     setErrors({});
+    stepDir.current = "back";
     setStep((s) => s - 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -428,7 +431,7 @@ export default function Home() {
       : null;
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
-        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center">
+        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center animate-success">
           <div className="flex items-center justify-center gap-2 mb-5">
             <div className="w-8 h-8 rounded-xl bg-guinda-100 flex items-center justify-center overflow-hidden shrink-0">
               <Image src="/logo.svg" alt="RegulaTierra" width={22} height={22} />
@@ -469,7 +472,7 @@ export default function Home() {
     const folioNum = `CAP-2026-${submittedId.slice(-4).toUpperCase()}`;
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
-        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center">
+        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center animate-success">
           <div className="flex items-center justify-center gap-2 mb-5">
             <div className="w-8 h-8 rounded-xl bg-guinda-100 flex items-center justify-center overflow-hidden shrink-0">
               <Image src="/logo.svg" alt="RegulaTierra" width={22} height={22} />
@@ -564,8 +567,8 @@ export default function Home() {
             </div>
           )}
 
-          <button onClick={() => setStep(1)}
-            className="w-full flex items-center gap-4 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] rounded-2xl px-5 py-5 shadow-md transition-all">
+          <button onClick={() => { stepDir.current = "forward"; setStep(1); }}
+            className="w-full flex items-center gap-4 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] rounded-2xl px-5 py-5 shadow-md transition-all slide-up-2">
             <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
               <Upload className="w-6 h-6 text-white" strokeWidth={1.5} />
             </div>
@@ -577,7 +580,7 @@ export default function Home() {
           </button>
 
           <Link href="/consulta"
-            className="w-full flex items-center gap-4 bg-white border-2 border-guinda-200 hover:border-guinda-400 hover:bg-guinda-50 active:scale-[.98] rounded-2xl px-5 py-5 shadow-sm transition-all">
+            className="w-full flex items-center gap-4 bg-white border-2 border-guinda-200 hover:border-guinda-400 hover:bg-guinda-50 active:scale-[.98] rounded-2xl px-5 py-5 shadow-sm transition-all slide-up-3">
             <div className="w-12 h-12 rounded-2xl bg-guinda-100 flex items-center justify-center shrink-0">
               <Search className="w-6 h-6 text-guinda-700" strokeWidth={1.5} />
             </div>
@@ -646,7 +649,7 @@ export default function Home() {
               const current = i === step - 1;
               return (
                 <button key={i} type="button"
-                  onClick={() => { if (done) { setErrors({}); setStep(i + 1); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
+                  onClick={() => { if (done) { setErrors({}); stepDir.current = "back"; setStep(i + 1); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
                   title={done ? `Volver al paso ${i + 1}` : undefined}
                   className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
                     current ? "bg-white" : done ? "bg-white/70 hover:bg-white cursor-pointer" : "bg-white/20 cursor-default"
@@ -679,7 +682,7 @@ export default function Home() {
       )}
 
       {/* ── Contenido del paso ── */}
-      <div key={step} className="max-w-2xl mx-auto px-4 pt-5 space-y-4 step-animate">
+      <div key={step} className={`max-w-2xl mx-auto px-4 pt-5 space-y-4 ${stepDir.current === "back" ? "step-animate-back" : "step-animate"}`}>
 
         {/* PASO 1 · Foto de la casa */}
         {step === 1 && (
