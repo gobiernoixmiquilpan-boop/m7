@@ -832,29 +832,54 @@ function PhotoUpload({ label, icon, preview, inputId, onChange, error }: {
   label: string; icon: React.ReactNode; preview: string | null;
   inputId: string; onChange: (f: File) => void; error?: string;
 }) {
+  const camId = `${inputId}-cam`;
+  const galId = `${inputId}-gal`;
+  const handle = (e: React.ChangeEvent<HTMLInputElement>) =>
+    e.target.files?.[0] && onChange(e.target.files[0]);
+
   return (
     <>
-      <input id={inputId} type="file" accept="image/*" className="hidden"
-        onChange={(e) => e.target.files?.[0] && onChange(e.target.files[0])} />
-      <label htmlFor={inputId}
-        className={`cursor-pointer border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center overflow-hidden transition-all hover:border-guinda-400 h-36 select-none ${error ? "border-red-300 bg-red-50/60" : preview ? "border-guinda-300 bg-guinda-50/40" : "border-gray-200 bg-gray-50/60 hover:bg-guinda-50"}`}>
+      <input id={camId} type="file" accept="image/*" capture="environment" className="hidden" onChange={handle} />
+      <input id={galId} type="file" accept="image/*"                       className="hidden" onChange={handle} />
+
+      <div className={`border-2 border-dashed rounded-2xl overflow-hidden h-40 flex flex-col ${
+        error ? "border-red-300 bg-red-50/60" : preview ? "border-guinda-300" : "border-gray-200 bg-gray-50/60"
+      }`}>
         {preview ? (
-          <div className="relative w-full h-full">
+          <div className="relative flex-1">
             <Image src={preview} alt={label} fill className="object-cover" unoptimized />
-            <div className="absolute inset-0 bg-guinda-900/50 flex items-end justify-center pb-3">
-              <span className="inline-flex items-center gap-1.5 text-white text-xs font-semibold bg-guinda-800/80 px-3 py-1.5 rounded-full">
-                <Camera className="w-3.5 h-3.5" strokeWidth={2} /> Cambiar
-              </span>
+            <div className="absolute inset-0 bg-guinda-900/60 flex flex-col justify-end p-2 gap-1.5">
+              <div className="flex gap-1.5">
+                <label htmlFor={camId}
+                  className="flex-1 flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer select-none border border-white/30">
+                  <Camera className="w-3 h-3" strokeWidth={2} /> Cámara
+                </label>
+                <label htmlFor={galId}
+                  className="flex-1 flex items-center justify-center gap-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-[10px] font-semibold py-1.5 rounded-lg cursor-pointer select-none border border-white/30">
+                  <ImageIcon className="w-3 h-3" strokeWidth={2} /> Galería
+                </label>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 px-3">
-            <div className="w-10 h-10 rounded-xl bg-guinda-100 flex items-center justify-center">{icon}</div>
-            <p className="text-xs text-gray-500 font-medium">{label}</p>
-            <p className="text-[10px] text-gray-400">Toca para agregar</p>
+          <div className="flex flex-col items-center justify-between flex-1 py-3 px-2">
+            <div className="flex flex-col items-center gap-1.5 flex-1 justify-center">
+              <div className="w-9 h-9 rounded-xl bg-guinda-100 flex items-center justify-center">{icon}</div>
+              <p className="text-[11px] text-gray-500 font-medium text-center leading-tight">{label}</p>
+            </div>
+            <div className="flex gap-1.5 w-full mt-2">
+              <label htmlFor={camId}
+                className="flex-1 flex items-center justify-center gap-1 bg-guinda-700 hover:bg-guinda-800 active:scale-[.97] text-white text-[10px] font-semibold py-2 rounded-xl cursor-pointer select-none transition-all">
+                <Camera className="w-3 h-3" strokeWidth={2} /> Cámara
+              </label>
+              <label htmlFor={galId}
+                className="flex-1 flex items-center justify-center gap-1 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-[10px] font-semibold py-2 rounded-xl cursor-pointer select-none transition-all">
+                <ImageIcon className="w-3 h-3" strokeWidth={2} /> Galería
+              </label>
+            </div>
           </div>
         )}
-      </label>
+      </div>
       {error && <FieldError msg={error} />}
     </>
   );
