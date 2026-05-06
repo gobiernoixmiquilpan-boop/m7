@@ -177,7 +177,9 @@ export default function Home() {
   const [loading,     setLoading]     = useState(false);
   const [errors,      setErrors]      = useState<Partial<Record<keyof FormData, string>>>({});
   const [geoLoading,  setGeoLoading]  = useState(false);
+  const [geoSeconds,  setGeoSeconds]  = useState(0);
   const [geoError,    setGeoError]    = useState<string | null>(null);
+  const geoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showSaved,   setShowSaved]   = useState(false);
   const [offline,     setOffline]     = useState(false);
 
@@ -222,6 +224,16 @@ export default function Home() {
   useEffect(() => {
     if (navigator.onLine) drainQueue();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Advertencia al cerrar con datos sin enviar ── */
+  useEffect(() => {
+    if (step === 0 || submitted) return;
+    const hasData = !!(form.nombreCompleto || form.comunidad || form.ubicacion || form.fotoCasa);
+    if (!hasData) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step, submitted, form.nombreCompleto, form.comunidad, form.ubicacion, form.fotoCasa]);
 
   /* ── PWA install prompt ── */
   useEffect(() => {
@@ -379,10 +391,15 @@ export default function Home() {
       setGeoError("Tu navegador no soporta geolocalización.");
       return;
     }
+    setGeoSeconds(0);
     setGeoLoading(true);
     setGeoError(null);
+    if (geoTimer.current) clearInterval(geoTimer.current);
+    geoTimer.current = setInterval(() => setGeoSeconds((s) => s + 1), 1000);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        if (geoTimer.current) clearInterval(geoTimer.current);
         const lat = parseFloat(pos.coords.latitude.toFixed(6));
         const lng = parseFloat(pos.coords.longitude.toFixed(6));
         setForm((p) => ({ ...p, ubicacion: `${lat}, ${lng}`, lat, lng }));
@@ -390,6 +407,7 @@ export default function Home() {
         setGeoLoading(false);
       },
       (err) => {
+        if (geoTimer.current) clearInterval(geoTimer.current);
         setGeoLoading(false);
         if (err.code === err.PERMISSION_DENIED) {
           setGeoError("Permiso denegado. Activa la ubicación en tu navegador.");
@@ -623,11 +641,19 @@ export default function Home() {
           <h1 className="text-xl font-bold text-white mb-4">{STEP_TITLES[step - 1]}</h1>
 
           <div className="flex gap-1">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <div key={i}
-                className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${i < step ? "bg-white" : "bg-white/20"}`}
-              />
-            ))}
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
+              const done = i < step - 1;
+              const current = i === step - 1;
+              return (
+                <button key={i} type="button"
+                  onClick={() => { if (done) { setErrors({}); setStep(i + 1); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
+                  title={done ? `Volver al paso ${i + 1}` : undefined}
+                  className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
+                    current ? "bg-white" : done ? "bg-white/70 hover:bg-white cursor-pointer" : "bg-white/20 cursor-default"
+                  }`}
+                />
+              );
+            })}
           </div>
         </div>
       </header>
@@ -716,9 +742,11 @@ export default function Home() {
               <button type="button" onClick={useGeo} disabled={geoLoading}
                 className="mt-3 inline-flex items-center justify-center gap-2 text-sm text-guinda-700 hover:text-guinda-900 font-medium bg-guinda-50 hover:bg-guinda-100 border border-guinda-200 px-3.5 py-2.5 rounded-xl transition-all w-full disabled:opacity-60">
                 {geoLoading
-                  ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
-                  : <MapPin className="w-4 h-4" strokeWidth={2} />}
-                {geoLoading ? "Obteniendo ubicación…" : form.lat ? "Ubicación obtenida ✓" : "Usar mi ubicación actual"}
+                  ? <Loader2 className="w-4 h-4 animate-spin shrink-0" strokeWidth={2} />
+                  : <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} />}
+                {geoLoading
+                  ? <span>Buscando señal… <span className="font-mono">{geoSeconds}s</span>{geoSeconds >= 8 ? " — puede tardar en interiores" : ""}</span>
+                  : form.lat ? "Ubicación obtenida ✓" : "Usar mi ubicación actual"}
               </button>
               {geoError && <FieldError msg={geoError} />}
             </Card>

@@ -1,19 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, ChevronLeft, AlertCircle } from "lucide-react";
+import { Search, ChevronLeft, AlertCircle, Clock, X } from "lucide-react";
+
+const HISTORY_KEY = "capula-folio-history";
 
 function normalize(v: string) {
   return v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 14);
 }
 
+function saveHistory(folio: string) {
+  try {
+    const h: string[] = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]");
+    const updated = [folio, ...h.filter((f) => f !== folio)].slice(0, 5);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  } catch { /* noop */ }
+}
+
 export default function ConsultaPage() {
-  const [folio, setFolio] = useState("");
-  const [error, setError] = useState("");
+  const [folio,   setFolio]   = useState("");
+  const [error,   setError]   = useState("");
+  const [history, setHistory] = useState<string[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]"));
+    } catch { /* noop */ }
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +39,16 @@ export default function ConsultaPage() {
       setError("Formato inválido. Ejemplo: CAP-2026-4A2B");
       return;
     }
+    saveHistory(clean);
     router.push(`/consulta/${clean}`);
+  }
+
+  function removeHistory(f: string) {
+    try {
+      const updated = history.filter((h) => h !== f);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      setHistory(updated);
+    } catch { /* noop */ }
   }
 
   return (
@@ -75,6 +101,30 @@ export default function ConsultaPage() {
               <Search className="w-4 h-4" strokeWidth={2} /> Consultar estado
             </button>
           </form>
+
+          {history.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+                <p className="text-xs font-semibold text-gray-500">Consultados recientemente</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {history.map((f) => (
+                  <div key={f} className="flex items-center gap-2 px-4 py-0.5">
+                    <button
+                      onClick={() => { saveHistory(f); router.push(`/consulta/${f}`); }}
+                      className="flex-1 text-left py-3 text-sm font-mono font-semibold text-guinda-700 hover:text-guinda-900 tracking-wider transition-colors">
+                      {f}
+                    </button>
+                    <button onClick={() => removeHistory(f)}
+                      className="p-1.5 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-all">
+                      <X className="w-3.5 h-3.5" strokeWidth={2} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <p className="text-center text-xs text-gray-400 px-4 leading-relaxed">
             El folio aparece en la pantalla de confirmación al finalizar tu solicitud.
