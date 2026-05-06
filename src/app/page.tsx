@@ -144,7 +144,7 @@ async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promi
 /* ═══════════════════════════════════════════════════════ */
 
 export default function Home() {
-  const [step,        setStep]        = useState(1);
+  const [step,        setStep]        = useState(0);
   const [form,        setForm]        = useState<FormData>(() => {
     if (typeof window === "undefined") return emptyForm;
     try {
@@ -454,6 +454,71 @@ export default function Home() {
     );
   }
 
+  /* ══ Pantalla de inicio ══ */
+  if (step === 0) {
+    return (
+      <main className="min-h-screen bg-[#f8f7f8] flex flex-col">
+        <div className="bg-guinda-800 rounded-b-[2.5rem] shadow-lg px-5 pt-12 pb-10">
+          <div className="max-w-sm mx-auto flex flex-col items-center text-center">
+            <div className="w-20 h-20 rounded-3xl bg-white/15 flex items-center justify-center mb-5 overflow-hidden">
+              <Image src="/logo.svg" alt="RegulaTierra" width={52} height={52} priority />
+            </div>
+            <p className="text-guinda-200 text-[11px] font-semibold uppercase tracking-widest mb-1">
+              Contraloría Municipal · Ixmiquilpan
+            </p>
+            <h1 className="text-2xl font-bold text-white mb-1">RegulaTierra</h1>
+            <p className="text-guinda-300 text-sm">Regularización de Tierras · Capula 2026</p>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center px-5 pt-8 pb-10 w-full max-w-sm mx-auto space-y-4">
+          {pendingCount > 0 && !offline && (
+            <div className="w-full flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2.5} />
+              <p className="text-xs text-emerald-800 font-medium">
+                Enviando {pendingCount} solicitud{pendingCount > 1 ? "es" : ""} guardada{pendingCount > 1 ? "s" : ""}…
+              </p>
+            </div>
+          )}
+          {offline && (
+            <div className="w-full flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3">
+              <Wifi className="w-4 h-4 text-yellow-600 shrink-0" strokeWidth={2} />
+              <p className="text-xs text-yellow-800 font-medium">Sin conexión</p>
+            </div>
+          )}
+
+          <button onClick={() => setStep(1)}
+            className="w-full flex items-center gap-4 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] rounded-2xl px-5 py-5 shadow-md transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+              <Upload className="w-6 h-6 text-white" strokeWidth={1.5} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-base font-bold text-white">Nueva solicitud</p>
+              <p className="text-xs text-guinda-200 mt-0.5">Registra tu terreno por primera vez</p>
+            </div>
+            <ChevronDown className="w-5 h-5 text-guinda-300 -rotate-90 shrink-0" strokeWidth={2} />
+          </button>
+
+          <Link href="/consulta"
+            className="w-full flex items-center gap-4 bg-white border-2 border-guinda-200 hover:border-guinda-400 hover:bg-guinda-50 active:scale-[.98] rounded-2xl px-5 py-5 shadow-sm transition-all">
+            <div className="w-12 h-12 rounded-2xl bg-guinda-100 flex items-center justify-center shrink-0">
+              <Search className="w-6 h-6 text-guinda-700" strokeWidth={1.5} />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-base font-bold text-guinda-800">Consultar mi solicitud</p>
+              <p className="text-xs text-gray-400 mt-0.5">Revisa el estado con tu número de folio</p>
+            </div>
+            <ChevronDown className="w-5 h-5 text-gray-300 -rotate-90 shrink-0" strokeWidth={2} />
+          </Link>
+
+          <p className="text-[10px] text-gray-400 text-center pt-2">
+            Información confidencial · Uso exclusivo del municipio
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   /* ══ Wizard ══ */
   return (
     <div className="min-h-screen bg-[#f8f7f8] pb-44">
@@ -522,19 +587,6 @@ export default function Home() {
         {/* PASO 1 · Foto de la casa */}
         {step === 1 && (
           <>
-            {/* Acceso rápido a consulta de folio */}
-            <Link href="/consulta"
-              className="flex items-center gap-4 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] rounded-2xl px-5 py-4 shadow-md transition-all group">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-                <Search className="w-6 h-6 text-white" strokeWidth={2} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-white leading-tight">¿Ya tienes una solicitud?</p>
-                <p className="text-xs text-guinda-200 mt-0.5">Consulta tu estado con el número de folio</p>
-              </div>
-              <ChevronDown className="w-5 h-5 text-guinda-300 -rotate-90 shrink-0" strokeWidth={2} />
-            </Link>
-
             <div className="flex items-start gap-2.5 bg-guinda-50 border border-guinda-100 rounded-2xl px-4 py-3">
               <Info className="w-4 h-4 text-guinda-500 mt-px shrink-0" strokeWidth={2} />
               <p className="text-xs text-guinda-800 leading-relaxed">
