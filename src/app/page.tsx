@@ -524,15 +524,15 @@ export default function Home() {
           <>
             {/* Acceso rápido a consulta de folio */}
             <Link href="/consulta"
-              className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-4 py-3.5 shadow-sm hover:border-guinda-200 hover:bg-guinda-50/40 transition-all group">
-              <div className="w-9 h-9 rounded-xl bg-guinda-100 flex items-center justify-center shrink-0">
-                <Search className="w-4 h-4 text-guinda-600" strokeWidth={2} />
+              className="flex items-center gap-4 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] rounded-2xl px-5 py-4 shadow-md transition-all group">
+              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+                <Search className="w-6 h-6 text-white" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-700 leading-none">¿Ya tienes una solicitud?</p>
-                <p className="text-xs text-gray-400 mt-0.5">Consulta el estado con tu número de folio</p>
+                <p className="text-base font-bold text-white leading-tight">¿Ya tienes una solicitud?</p>
+                <p className="text-xs text-guinda-200 mt-0.5">Consulta tu estado con el número de folio</p>
               </div>
-              <ChevronDown className="w-4 h-4 text-gray-300 -rotate-90 shrink-0 group-hover:text-guinda-400 transition-colors" strokeWidth={2} />
+              <ChevronDown className="w-5 h-5 text-guinda-300 -rotate-90 shrink-0" strokeWidth={2} />
             </Link>
 
             <div className="flex items-start gap-2.5 bg-guinda-50 border border-guinda-100 rounded-2xl px-4 py-3">
@@ -751,7 +751,7 @@ export default function Home() {
         <div className="flex items-center justify-center gap-3 mt-2">
           <p className="text-[10px] text-gray-400">Contraloría Municipal de Ixmiquilpan</p>
           <span className="text-gray-300 text-[10px]">·</span>
-          <Link href="/consulta" className="text-[10px] text-guinda-600 font-medium hover:text-guinda-800">
+          <Link href="/consulta" className="text-xs text-guinda-600 font-semibold hover:text-guinda-800 underline underline-offset-2">
             Consultar folio
           </Link>
         </div>
