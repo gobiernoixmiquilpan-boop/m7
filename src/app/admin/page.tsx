@@ -91,10 +91,10 @@ function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; on
 }
 
 /* ──────────────────── Login ──────────────────── */
-function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error }: {
+function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expired }: {
   email: string; setEmail: (v: string) => void;
   pw: string; setPw: (v: string) => void;
-  onLogin: () => void; loading: boolean; error: boolean;
+  onLogin: () => void; loading: boolean; error: boolean; expired: boolean;
 }) {
   return (
     <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
@@ -118,7 +118,8 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error }: {
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
           />
         </div>
-        {error && <p className="text-xs text-red-500 mb-3">Correo o contraseña incorrectos.</p>}
+        {expired && <p className="text-xs text-yellow-600 mb-3 font-medium">Sesión expirada. Vuelve a ingresar.</p>}
+        {error   && <p className="text-xs text-red-500 mb-3">Correo o contraseña incorrectos.</p>}
         <button onClick={onLogin} disabled={loading}
           className="w-full bg-guinda-700 hover:bg-guinda-800 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
           {loading && <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />}
@@ -319,6 +320,7 @@ export default function AdminPage() {
   const [pw,              setPw]              = useState("");
   const [loginLoading,    setLoginLoading]    = useState(false);
   const [loginError,      setLoginError]      = useState(false);
+  const [sessionExpired,  setSessionExpired]  = useState(false);
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
   const [loading,         setLoading]         = useState(false);
   const [search,          setSearch]          = useState("");
@@ -345,6 +347,7 @@ export default function AdminPage() {
         sessionStorage.removeItem("admin-ok");
         setAuthed(false);
         setSubmissions([]);
+        setSessionExpired(true);
         return;
       }
       setSubmissions(await res.json());
@@ -432,7 +435,7 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} />;
+  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} />;
 
   /* ── Stats ── */
   const total    = submissions.length;

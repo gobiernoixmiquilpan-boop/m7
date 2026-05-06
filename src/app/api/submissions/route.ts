@@ -45,9 +45,11 @@ export async function POST(req: NextRequest) {
   const validationError = validatePost(fd);
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
-  const latRaw = fd.get("lat") as string | null;
-  const lngRaw = fd.get("lng") as string | null;
-  const id = crypto.randomUUID();
+  const latRaw   = fd.get("lat") as string | null;
+  const lngRaw   = fd.get("lng") as string | null;
+  const clientId = fd.get("id")  as string | null;
+  const UUID_RE  = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const id = (clientId && UUID_RE.test(clientId)) ? clientId : crypto.randomUUID();
 
   const entry: Record<string, unknown> = {
     id,

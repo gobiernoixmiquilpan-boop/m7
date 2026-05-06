@@ -1,5 +1,5 @@
-const CACHE = 'capula-2026-v2';
-const PRECACHE = ['/'];
+const CACHE = 'capula-2026-v3';
+const PRECACHE = ['/', '/consulta'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

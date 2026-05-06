@@ -71,7 +71,7 @@ const deletePhoto = async (key: string) => {
 };
 
 type DraftFields = Omit<FormData, "fotoCasa" | "fotoINEFrente" | "fotoINEAtras">;
-type QueueItem   = { tempId: string; draft: DraftFields };
+type QueueItem   = { tempId: string; id: string; draft: DraftFields };
 
 const STEP_TITLES = [
   "Foto de la casa",
@@ -154,9 +154,12 @@ export default function Home() {
     return emptyForm;
   });
   const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null });
-  const [submitted,        setSubmitted]        = useState(false);
-  const [submittedId,      setSubmittedId]      = useState("");
-  const [submittedOffline, setSubmittedOffline] = useState(false);
+  const [submitted,          setSubmitted]          = useState(false);
+  const [submittedId,        setSubmittedId]        = useState("");
+  const [submittedOffline,   setSubmittedOffline]   = useState(false);
+  const [submittedOfflineId, setSubmittedOfflineId] = useState("");
+  const [canInstall,         setCanInstall]         = useState(false);
+  const installPrompt = useRef<{ prompt: () => Promise<void> } | null>(null);
   const [pendingCount,     setPendingCount]     = useState(() => {
     if (typeof window === "undefined") return 0;
     try {
@@ -213,6 +216,22 @@ export default function Home() {
     if (navigator.onLine) drainQueue();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── PWA install prompt ── */
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      installPrompt.current = e as unknown as { prompt: () => Promise<void> };
+      setCanInstall(true);
+    };
+    const installed = () => { setCanInstall(false); installPrompt.current = null; };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installed);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installed);
+    };
+  }, []);
+
   async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file) return;
     const compressed = await compressImage(file);
@@ -268,7 +287,8 @@ export default function Home() {
       setSubmitted(true);
       void drainQueue(); // envía en segundo plano cualquier otra solicitud en cola
     } catch {
-      // Sin conexión: guardar en la cola persistente
+      // Sin conexión: guardar en la cola persistente con UUID generado localmente
+      const offlineId = crypto.randomUUID();
       const tempId = `q${Date.now()}`;
       const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
       try {
@@ -276,11 +296,12 @@ export default function Home() {
         if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
         if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
         const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
-        queue.push({ tempId, draft });
+        queue.push({ tempId, id: offlineId, draft });
         localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
         setPendingCount(queue.length);
       } catch { /* noop */ }
       localStorage.removeItem(DRAFT_KEY);
+      setSubmittedOfflineId(offlineId);
       setSubmittedOffline(true);
       setSubmitted(true);
     } finally {
@@ -300,6 +321,7 @@ export default function Home() {
         Object.entries(item.draft).forEach(([k, v]) => {
           if (v !== null && v !== undefined) fd.append(k, String(v));
         });
+        if (item.id) fd.append("id", item.id);
         const fotoCasa      = await getPhoto(`${item.tempId}_fotoCasa`);
         const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
         const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
@@ -327,7 +349,7 @@ export default function Home() {
   }
 
   function reset() {
-    setSubmitted(false); setSubmittedId(""); setSubmittedOffline(false); setStep(1);
+    setSubmitted(false); setSubmittedId(""); setSubmittedOffline(false); setSubmittedOfflineId(""); setStep(1);
     setForm(emptyForm);
     setPreviews((p) => {
       if (p.fotoCasa)      URL.revokeObjectURL(p.fotoCasa);
@@ -370,6 +392,9 @@ export default function Home() {
 
   /* ══ Pantalla de éxito — sin conexión ══ */
   if (submitted && submittedOffline) {
+    const offlineFolio = submittedOfflineId
+      ? `CAP-2026-${submittedOfflineId.slice(-4).toUpperCase()}`
+      : null;
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center">
@@ -384,19 +409,19 @@ export default function Home() {
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-1">Solicitud guardada</h2>
           <p className="text-gray-600 text-sm mt-2 leading-relaxed">
-            Sin conexión — los datos se enviarán <strong>automáticamente</strong> al recuperar señal.
+            Sin conexión — se enviará <strong>automáticamente</strong> al recuperar señal.
           </p>
-          {pendingCount > 1 && (
-            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3">
-              <p className="text-xs text-yellow-700 font-medium">
-                {pendingCount} solicitudes en cola de envío
-              </p>
+          {offlineFolio && (
+            <div className="mt-4 bg-guinda-800 rounded-2xl px-6 py-4">
+              <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1">Folio provisional</p>
+              <p className="text-white text-2xl font-bold font-mono tracking-wider">{offlineFolio}</p>
+              <p className="text-guinda-300 text-[10px] mt-1">Guarda este número para consultar tu estado</p>
             </div>
           )}
           <div className="mt-4 flex items-start gap-2 bg-guinda-50 border border-guinda-100 rounded-xl px-4 py-3">
             <ShieldCheck className="w-4 h-4 text-guinda-600 shrink-0 mt-px" strokeWidth={2} />
             <p className="text-xs text-guinda-700 font-medium text-left">
-              No cierres la aplicación. Cuando haya señal se enviará en segundo plano.
+              Toma una captura de pantalla como comprobante.
             </p>
           </div>
           <button onClick={reset}
@@ -510,6 +535,18 @@ export default function Home() {
             </div>
             <ChevronDown className="w-5 h-5 text-gray-300 -rotate-90 shrink-0" strokeWidth={2} />
           </Link>
+
+          {canInstall && (
+            <button
+              onClick={async () => {
+                if (!installPrompt.current) return;
+                await installPrompt.current.prompt();
+                setCanInstall(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 border-2 border-guinda-200 text-guinda-700 font-semibold py-3 rounded-2xl text-sm hover:border-guinda-400 hover:bg-guinda-50 transition-all">
+              <ExternalLink className="w-4 h-4" strokeWidth={2} /> Instalar app en este dispositivo
+            </button>
+          )}
 
           <p className="text-[10px] text-gray-400 text-center pt-2">
             Información confidencial · Uso exclusivo del municipio
