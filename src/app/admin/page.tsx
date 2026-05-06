@@ -11,7 +11,7 @@ import {
 import {
   Users, MapPin, Droplets, CloudRain, LogOut, Download,
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
-  FileText, MessageCircle, ExternalLink, X, Trash2, Loader2,
+  FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
 } from "lucide-react";
 
 const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false });
@@ -150,6 +150,88 @@ function StatCard({ label, value, sub, icon, color = "guinda" }: {
   );
 }
 
+/* ──────────────────── Print ──────────────────── */
+function printSubmission(s: Submission) {
+  const f = `CAP-2026-${s.id.slice(-4).toUpperCase()}`;
+  const fecha = new Date(s.timestamp).toLocaleString("es-MX", {
+    day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const statusLabel = STATUS_OPTIONS.find((o) => o.value === (s.status ?? "pendiente"))?.label ?? "Pendiente";
+
+  const row = (label: string, value: string, mono = false) =>
+    `<tr><td class="label">${label}</td><td class="${mono ? "mono" : ""}">${value}</td></tr>`;
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Solicitud ${f} — RegulaTierra</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:28px}
+  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #6e112c}
+  .org{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+  .title{font-size:18px;font-weight:700;color:#6e112c}
+  .folio-box{background:#6e112c;color:#fff;padding:8px 18px;border-radius:8px;text-align:center}
+  .folio-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
+  .folio-num{font-family:monospace;font-size:17px;font-weight:700;letter-spacing:.1em}
+  .status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#f3f4f6;color:#444;margin-bottom:18px}
+  h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:16px 0 6px}
+  table{width:100%;border-collapse:collapse;margin-bottom:4px}
+  td{padding:6px 4px;border-bottom:1px solid #eee;vertical-align:top}
+  td.label{color:#888;font-size:11px;width:38%;white-space:nowrap}
+  td.mono{font-family:monospace;font-size:11px;word-break:break-all}
+  .footer{margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:11px;color:#999}
+  .sign{margin-top:36px;display:flex;gap:40px}
+  .sign-box{flex:1;border-top:1px solid #888;padding-top:4px;font-size:11px;color:#888;text-align:center}
+  @media print{button{display:none!important}}
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="org">Contraloría Municipal · Ixmiquilpan</div>
+    <div class="title">Solicitud de Regularización de Tierras</div>
+    <div class="org" style="margin-top:3px">Capula 2026</div>
+  </div>
+  <div class="folio-box">
+    <div class="folio-lbl">Folio</div>
+    <div class="folio-num">${f}</div>
+  </div>
+</div>
+<span class="status">Estado: ${statusLabel}</span>
+<h2>Datos del solicitante</h2>
+<table>
+  ${row("Nombre completo", s.nombreCompleto)}
+  ${row("CURP", s.curp, true)}
+  ${row("Celular", s.celular)}
+</table>
+<h2>Datos del predio</h2>
+<table>
+  ${row("Comunidad", s.comunidad)}
+  ${row("Predio", s.predio)}
+  ${row("Lote", s.lote)}
+  ${row("Tipo de tierra", s.tipoTierra === "riego" ? "Riego" : "Temporal")}
+  ${row("Superficie", `${s.superficie} ha`)}
+  ${row("Habla ñhañhu", s.hablaDialecto === "si" ? "Sí" : "No")}
+</table>
+<h2>Ubicación</h2>
+<table>
+  ${row("Dirección / referencia", s.ubicacion)}
+  ${s.lat && s.lng ? row("Coordenadas", `${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}`) : ""}
+</table>
+<div class="sign">
+  <div class="sign-box">Firma del solicitante</div>
+  <div class="sign-box">Sello y firma del funcionario</div>
+</div>
+<div class="footer">
+  <span>Registrado: ${fecha}</span>
+  <span>Folio: ${f}</span>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`;
+
+  const w = window.open("about:blank", "_blank");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+}
+
 /* ──────────────────── Detail modal ──────────────────── */
 function DetailModal({ s, onClose, onStatusChange, onDelete }: {
   s: Submission;
@@ -282,8 +364,12 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
           </p>
         </div>
 
-        {/* Eliminar */}
-        <div className="p-5 border-t border-gray-100 shrink-0">
+        {/* Acciones */}
+        <div className="p-5 border-t border-gray-100 shrink-0 space-y-2">
+          <button onClick={() => printSubmission(s)}
+            className="w-full flex items-center justify-center gap-2 text-guinda-700 hover:text-guinda-900 hover:bg-guinda-50 border border-guinda-200 hover:border-guinda-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
+            <Printer className="w-4 h-4" strokeWidth={2} /> Imprimir / Guardar PDF
+          </button>
           <button onClick={() => onDelete(s.id)}
             className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
             <Trash2 className="w-4 h-4" strokeWidth={2} /> Eliminar registro
