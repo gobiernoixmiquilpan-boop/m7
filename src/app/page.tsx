@@ -109,7 +109,8 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!f.predio.trim())    e.predio    = "Requerido";
     if (!f.lote.trim())      e.lote      = "Requerido";
     if (!f.tipoTierra)       e.tipoTierra = "Seleccione una opción";
-    if (!f.superficie.trim()) e.superficie = "Requerido";
+    const sup = parseFloat(f.superficie);
+    if (!f.superficie.trim() || isNaN(sup) || sup <= 0) e.superficie = "Debe ser mayor a 0";
   }
   if (step === 7 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
   return e;

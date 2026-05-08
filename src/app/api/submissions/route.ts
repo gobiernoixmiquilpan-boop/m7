@@ -84,14 +84,14 @@ export async function POST(req: NextRequest) {
         .from("solicitudes")
         .upload(storagePath, Buffer.from(await file.arrayBuffer()), {
           contentType: file.type,
-          upsert: false,
+          upsert: true,
         });
       if (error) console.error(`[POST /api/submissions] storage upload ${field}:`, error.message);
       else entry[`${field}Url`] = storagePath;
     })
   );
 
-  const { error } = await supabase.from("submissions").insert(entry);
+  const { error } = await supabase.from("submissions").upsert(entry, { onConflict: "id", ignoreDuplicates: true });
   if (error) {
     console.error("[POST /api/submissions] insert:", error.code, error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
