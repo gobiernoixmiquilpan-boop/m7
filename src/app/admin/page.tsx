@@ -15,7 +15,14 @@ import {
   ArrowUp, ArrowDown, ZoomIn,
 } from "lucide-react";
 
-const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false });
+const AdminMap = dynamic(() => import("@/components/AdminMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 bg-gray-100 rounded-2xl flex items-center justify-center text-sm text-gray-400 animate-pulse">
+      Cargando mapa…
+    </div>
+  ),
+});
 
 interface Submission {
   id: string;
@@ -568,6 +575,7 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (!res.ok) { showToast("No se pudo eliminar. Intente de nuevo.", false); return; }
+    showToast("Registro eliminado correctamente.");
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
     if (selected?.id === id) setSelected(null);
   }
@@ -591,7 +599,11 @@ export default function AdminPage() {
       s.tipoTierra, s.superficie, s.hablaDialecto, statusLabel(s.status), s.ubicacion,
       new Date(s.timestamp).toLocaleDateString("es-MX"),
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v ?? ""}"`).join(",")).join("\n");
+    const sanitize = (v: string | number | undefined) => {
+      const s = String(v ?? "");
+      return /^[=+\-@|]/.test(s) ? `'${s}` : s;
+    };
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${sanitize(v)}"`).join(",")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

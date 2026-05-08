@@ -258,7 +258,7 @@ export default function Home() {
   }, []);
 
   async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
-    if (!file) return;
+    if (!file || compressing) return;
     setCompressing(true);
     const compressed = await compressImage(file);
     setCompressing(false);
@@ -295,8 +295,18 @@ export default function Home() {
   }
 
   async function submit() {
-    const e = validateStep(step, form);
-    if (Object.keys(e).length > 0) { setErrors(e); scrollToFirstError(); return; }
+    // Re-validate all steps (user could have gone back and cleared a field)
+    for (let s = 1; s <= TOTAL_STEPS; s++) {
+      const e = validateStep(s, form);
+      if (Object.keys(e).length > 0) {
+        setErrors(e);
+        stepDir.current = "back";
+        setStep(s);
+        scrollToFirstError();
+        return;
+      }
+    }
+    setErrors({});
     setLoading(true);
     setSubmitError(null);
     try {
