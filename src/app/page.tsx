@@ -8,6 +8,7 @@ import {
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
   ChevronDown, CheckCircle, ImageIcon, Loader2, ShieldCheck,
   ChevronLeft, ExternalLink, Wifi, Search, FileText, Trash2,
+  X, Copy,
 } from "lucide-react";
 
 interface FormData {
@@ -175,8 +176,10 @@ export default function Home() {
       return Array.isArray(q) ? q.length : 0;
     } catch { return 0; }
   });
-  const [loading,     setLoading]     = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [loading,      setLoading]      = useState(false);
+  const [compressing,  setCompressing]  = useState(false);
+  const [copied,       setCopied]       = useState(false);
+  const [submitError,  setSubmitError]  = useState<string | null>(null);
   const [errors,      setErrors]      = useState<Partial<Record<keyof FormData, string>>>({});
   const [geoLoading,  setGeoLoading]  = useState(false);
   const [geoSeconds,  setGeoSeconds]  = useState(0);
@@ -256,7 +259,9 @@ export default function Home() {
 
   async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file) return;
+    setCompressing(true);
     const compressed = await compressImage(file);
+    setCompressing(false);
     setForm((p) => ({ ...p, [field]: compressed }));
     savePhoto(field, compressed);
     setPreviews((p) => {
@@ -266,9 +271,16 @@ export default function Home() {
     setErrors((p) => ({ ...p, [field]: undefined }));
   }
 
+  function scrollToFirstError() {
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(".border-red-200, .border-red-300");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }
+
   function nextStep() {
     const e = validateStep(step, form);
-    if (Object.keys(e).length > 0) { setErrors(e); return; }
+    if (Object.keys(e).length > 0) { setErrors(e); scrollToFirstError(); return; }
     setErrors({});
     stepDir.current = "forward";
     setStep((s) => s + 1);
@@ -284,7 +296,7 @@ export default function Home() {
 
   async function submit() {
     const e = validateStep(step, form);
-    if (Object.keys(e).length > 0) { setErrors(e); return; }
+    if (Object.keys(e).length > 0) { setErrors(e); scrollToFirstError(); return; }
     setLoading(true);
     setSubmitError(null);
     try {
@@ -466,7 +478,19 @@ export default function Home() {
               <p className="text-guinda-300 text-[10px] mt-1">Guarda este número para consultar tu estado</p>
             </div>
           )}
-          <div className="mt-4 flex items-start gap-2 bg-guinda-50 border border-guinda-100 rounded-xl px-4 py-3">
+          {offlineFolio && (
+            <button
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(offlineFolio); } catch { /* noop */ }
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
+              }}
+              className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-sm font-semibold py-3 rounded-2xl transition-all">
+              {copied ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Copy className="w-4 h-4" strokeWidth={2} />}
+              {copied ? "¡Copiado!" : "Copiar número de folio"}
+            </button>
+          )}
+          <div className="mt-3 flex items-start gap-2 bg-guinda-50 border border-guinda-100 rounded-xl px-4 py-3">
             <ShieldCheck className="w-4 h-4 text-guinda-600 shrink-0 mt-px" strokeWidth={2} />
             <p className="text-xs text-guinda-700 font-medium text-left">
               Toma una captura de pantalla como comprobante.
@@ -508,12 +532,16 @@ export default function Home() {
           <p className="text-gray-500 text-sm mt-4 leading-relaxed">
             Nos comunicaremos al número <strong>{form.celular}</strong>.
           </p>
-          <div className="mt-3 flex items-center gap-2 bg-guinda-50 border border-guinda-100 rounded-xl px-4 py-3">
-            <ShieldCheck className="w-4 h-4 text-guinda-600 shrink-0" strokeWidth={2} />
-            <p className="text-xs text-guinda-700 font-medium text-left">
-              Toma una captura de pantalla de este comprobante.
-            </p>
-          </div>
+          <button
+            onClick={async () => {
+              try { await navigator.clipboard.writeText(folioNum); } catch { /* noop */ }
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2500);
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-sm font-semibold py-3 rounded-2xl transition-all">
+            {copied ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Copy className="w-4 h-4" strokeWidth={2} />}
+            {copied ? "¡Copiado!" : "Copiar número de folio"}
+          </button>
           <Link href={`/consulta/${`CAP-2026-${submittedId.slice(-4).toUpperCase()}`}`}
             className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-sm font-semibold py-3 rounded-2xl transition-all">
             <Search className="w-4 h-4" strokeWidth={2} /> Ver estado de mi solicitud
@@ -633,16 +661,23 @@ export default function Home() {
       <header className="bg-guinda-800 rounded-b-[2rem] shadow-lg">
         <div className="max-w-2xl mx-auto px-5 pt-6 pb-5">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">
-              <Image src="/logo.svg" alt="RegulaTierra logo" width={32} height={32} priority />
-            </div>
+            <button onClick={() => { stepDir.current = "back"; setStep(0); }}
+              className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center shrink-0 transition-colors"
+              title="Volver al inicio" aria-label="Volver al inicio">
+              <X className="w-5 h-5 text-white" strokeWidth={2} />
+            </button>
             <div className="flex-1 min-w-0">
               <p className="text-guinda-200 text-[11px] font-semibold uppercase tracking-widest leading-none">
                 Contraloría Municipal · Ixmiquilpan
               </p>
               <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
             </div>
-            {showSaved && (
+            {compressing && (
+              <span className="text-[10px] text-guinda-300 font-medium flex items-center gap-1 shrink-0">
+                <Loader2 className="w-3 h-3 animate-spin" strokeWidth={2.5} /> Procesando…
+              </span>
+            )}
+            {!compressing && showSaved && (
               <span className="text-[10px] text-guinda-300 font-medium flex items-center gap-1 shrink-0 animate-pulse">
                 <Check className="w-3 h-3" strokeWidth={2.5} /> Guardado
               </span>
@@ -910,12 +945,12 @@ export default function Home() {
           ) : <div />}
 
           {step < TOTAL_STEPS ? (
-            <button type="button" onClick={nextStep}
-              className="flex-1 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all">
-              Siguiente →
+            <button type="button" onClick={nextStep} disabled={compressing}
+              className="flex-1 bg-guinda-700 hover:bg-guinda-800 disabled:opacity-60 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+              {compressing ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Procesando foto…</> : "Siguiente →"}
             </button>
           ) : (
-            <button type="button" onClick={submit} disabled={loading}
+            <button type="button" onClick={submit} disabled={loading || compressing}
               className="flex-1 bg-guinda-700 hover:bg-guinda-800 disabled:opacity-70 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
               {loading
                 ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Enviando…</>

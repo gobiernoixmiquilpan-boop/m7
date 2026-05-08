@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -65,7 +65,7 @@ function folio(id: string) {
 }
 
 /* ──────────────────── Delete confirm modal ──────────────────── */
-function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
@@ -74,6 +74,7 @@ function DeleteConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; on
           <Trash2 className="w-7 h-7 text-red-600" strokeWidth={1.5} />
         </div>
         <h3 className="font-bold text-gray-800 text-base mb-1">¿Eliminar registro?</h3>
+        {name && <p className="text-sm font-semibold text-gray-700 mb-1 truncate px-2">{name}</p>}
         <p className="text-sm text-gray-500 mb-5">Esta acción no se puede deshacer.</p>
         <div className="flex gap-3">
           <button onClick={onCancel}
@@ -417,7 +418,16 @@ export default function AdminPage() {
   const [selected,        setSelected]        = useState<Submission | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [activeTab,       setActiveTab]       = useState<"mapa" | "graficas" | "tabla">("tabla");
-  const [mountedTabs, setMountedTabs] = useState(new Set<string>(["tabla"]));
+  const [mountedTabs,     setMountedTabs]     = useState(new Set<string>(["tabla"]));
+  const [toast,           setToast]           = useState<{ msg: string; ok: boolean } | null>(null);
+  const [lastUpdated,     setLastUpdated]     = useState<Date | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(msg: string, ok = true) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, ok });
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  }
 
   function changeTab(tab: "mapa" | "graficas" | "tabla") {
     setMountedTabs(prev => new Set([...prev, tab]));
@@ -444,6 +454,7 @@ export default function AdminPage() {
       }
       setFetchError(null);
       setSubmissions(await res.json());
+      setLastUpdated(new Date());
     } catch {
       setFetchError("Error de conexión. Verifica tu internet e intenta de nuevo.");
     } finally {
@@ -496,7 +507,7 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    if (!res.ok) { alert("No se pudo eliminar. Intente de nuevo."); return; }
+    if (!res.ok) { showToast("No se pudo eliminar. Intente de nuevo.", false); return; }
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
     if (selected?.id === id) setSelected(null);
   }
@@ -507,7 +518,7 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
-    if (!res.ok) { alert("No se pudo actualizar el estado. Intente de nuevo."); return; }
+    if (!res.ok) { showToast("No se pudo actualizar el estado.", false); return; }
     setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
     setSelected((prev) => prev?.id === id ? { ...prev, status } : prev);
   }
@@ -585,6 +596,11 @@ export default function AdminPage() {
           <h1 className="font-bold text-base leading-none">Panel Administrativo</h1>
           <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
         </div>
+        {lastUpdated && (
+          <span className="text-guinda-300 text-[11px] hidden sm:block shrink-0">
+            {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
         <button onClick={fetchData} title="Actualizar" aria-label="Actualizar registros"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
@@ -760,7 +776,13 @@ export default function AdminPage() {
                 </span>
               </div>
 
-              {paginated.length === 0 ? (
+              {loading && submissions.length === 0 ? (
+                <div className="p-5 space-y-2.5">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.1 }} />
+                  ))}
+                </div>
+              ) : paginated.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                   <FileText className="w-10 h-10 mb-2 opacity-30" strokeWidth={1} />
                   <p className="text-sm">{search || filterComunidad ? "Sin resultados" : "Aún no hay registros"}</p>
@@ -835,9 +857,16 @@ export default function AdminPage() {
       {/* Modal de confirmación de eliminación */}
       {deleteConfirmId && (
         <DeleteConfirmModal
+          name={submissions.find((s) => s.id === deleteConfirmId)?.nombreCompleto ?? ""}
           onConfirm={async () => { await deleteRow(deleteConfirmId); setDeleteConfirmId(null); }}
           onCancel={() => setDeleteConfirmId(null)}
         />
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white whitespace-nowrap pointer-events-none ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
+          {toast.msg}
+        </div>
       )}
     </div>
   );
