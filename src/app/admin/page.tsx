@@ -433,6 +433,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
 /* ──────────────────── Admin principal ──────────────────── */
 export default function AdminPage() {
   const [authed,          setAuthed]          = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") === "1");
+  const [checkingAuth,    setCheckingAuth]    = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") !== "1");
   const [email,           setEmail]           = useState("");
   const [pw,              setPw]              = useState("");
   const [loginLoading,    setLoginLoading]    = useState(false);
@@ -503,9 +504,23 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (sessionStorage.getItem("admin-ok") === "1") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData();
+      return;
     }
+    // sessionStorage cleared (new tab / browser restart) but cookies may still be valid
+    fetch("/api/submissions")
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json() as Submission[];
+          sessionStorage.setItem("admin-ok", "1");
+          setSubmissions(data);
+          setLastUpdated(new Date());
+          setAuthed(true);
+        }
+        // 401 → just show login screen (don't set authed)
+      })
+      .catch(() => {}) // network error → show login
+      .finally(() => setCheckingAuth(false));
   }, [fetchData]);
 
   useEffect(() => {
@@ -586,6 +601,13 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   }
 
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-guinda-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-guinda-600 animate-spin" strokeWidth={1.5} />
+      </main>
+    );
+  }
   if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} />;
 
   /* ── Stats ── */
