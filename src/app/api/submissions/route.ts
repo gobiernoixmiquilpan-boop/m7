@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { isAdminAuth } from "@/lib/auth";
+import { withAdminAuth } from "@/lib/auth";
 
 const COMUNIDADES_VALIDAS = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
 
@@ -30,17 +30,18 @@ function validatePost(fd: FormData): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  if (!await isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const { data, error } = await supabase
-    .from("submissions")
-    .select("*")
-    .order("timestamp", { ascending: false });
-  if (error) {
-    console.error("[GET /api/submissions] ERROR:", error.code, error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-  console.log(`[GET /api/submissions] OK — ${data?.length ?? 0} registros`);
-  return NextResponse.json(data ?? []);
+  return withAdminAuth(req, async () => {
+    const { data, error } = await supabase
+      .from("submissions")
+      .select("*")
+      .order("timestamp", { ascending: false });
+    if (error) {
+      console.error("[GET /api/submissions] ERROR:", error.code, error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    console.log(`[GET /api/submissions] OK — ${data?.length ?? 0} registros`);
+    return NextResponse.json(data ?? []);
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -111,21 +112,23 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!await isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const { id, status } = await req.json() as { id: string; status: string };
-  const { error } = await supabase.from("submissions").update({ status }).eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return withAdminAuth(req, async () => {
+    const { id, status } = await req.json() as { id: string; status: string };
+    const { error } = await supabase.from("submissions").update({ status }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  });
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!await isAdminAuth(req)) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  const { id } = await req.json() as { id: string };
-  const { data: files } = await supabase.storage.from("solicitudes").list(id);
-  if (files && files.length > 0) {
-    await supabase.storage.from("solicitudes").remove(files.map((f) => `${id}/${f.name}`));
-  }
-  const { error } = await supabase.from("submissions").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return withAdminAuth(req, async () => {
+    const { id } = await req.json() as { id: string };
+    const { data: files } = await supabase.storage.from("solicitudes").list(id);
+    if (files && files.length > 0) {
+      await supabase.storage.from("solicitudes").remove(files.map((f) => `${id}/${f.name}`));
+    }
+    const { error } = await supabase.from("submissions").delete().eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  });
 }
