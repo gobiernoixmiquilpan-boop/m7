@@ -1,5 +1,5 @@
+import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
 
 const COOKIE_BASE = {
   httpOnly: true,
@@ -15,16 +15,22 @@ export async function withAdminAuth(
   const token        = req.cookies.get("admin_token")?.value;
   const refreshToken = req.cookies.get("admin_refresh")?.value;
 
-  // Validar token actual
+  // Cliente nuevo por request — evita que peticiones concurrentes
+  // corrompan el estado interno de auth del singleton compartido.
+  const client = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+
   if (token) {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await client.auth.getUser(token);
     if (error) console.error("[withAdminAuth] getUser:", error.message);
     if (!error && user) return handler();
   }
 
-  // Token expirado — intentar renovar con refresh_token
   if (refreshToken) {
-    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    const { data, error } = await client.auth.refreshSession({ refresh_token: refreshToken });
     if (!error && data.session) {
       console.log("[withAdminAuth] sesión renovada automáticamente");
       const res = await handler();

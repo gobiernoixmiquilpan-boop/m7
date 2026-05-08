@@ -481,7 +481,8 @@ export default function AdminPage() {
   const [sortKey,         setSortKey]         = useState<keyof Submission>("timestamp");
   const [sortDir,         setSortDir]         = useState<"asc" | "desc">("desc");
   const [filterPeriod,    setFilterPeriod]    = useState("");
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFetching  = useRef(false);
 
   function toggleSort(key: keyof Submission) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -502,6 +503,8 @@ export default function AdminPage() {
   }
 
   const fetchData = useCallback(async () => {
+    if (isFetching.current) return;
+    isFetching.current = true;
     setLoading(true);
     try {
       const res = await fetch("/api/submissions");
@@ -525,6 +528,7 @@ export default function AdminPage() {
       setFetchError("Error de conexión. Verifica tu internet e intenta de nuevo.");
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, []);
 
