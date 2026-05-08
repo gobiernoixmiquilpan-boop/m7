@@ -466,7 +466,7 @@ export default function AdminPage() {
   const [loginRemaining,  setLoginRemaining]  = useState<number | null>(null);
   const [sessionExpired,  setSessionExpired]  = useState(false);
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
-  const [loading,         setLoading]         = useState(false);
+  const [loading,         setLoading]         = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") === "1");
   const [fetchError,      setFetchError]      = useState<string | null>(null);
   const [search,          setSearch]          = useState("");
   const [filterComunidad, setFilterComunidad] = useState("");
@@ -535,7 +535,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (sessionStorage.getItem("admin-ok") === "1") {
       fetchData();
-      return;
+      return () => { isFetching.current = false; };
     }
     // sessionStorage cleared (new tab / browser restart) but cookies may still be valid
     fetch("/api/submissions")
