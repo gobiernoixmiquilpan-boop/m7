@@ -111,9 +111,13 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, id });
 }
 
+const VALID_STATUSES = ["pendiente", "revision", "aprobado", "rechazado"] as const;
+
 export async function PATCH(req: NextRequest) {
   return withAdminAuth(req, async () => {
     const { id, status } = await req.json() as { id: string; status: string };
+    if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number]))
+      return NextResponse.json({ error: "status inválido" }, { status: 400 });
     const { error } = await supabase.from("submissions").update({ status }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
