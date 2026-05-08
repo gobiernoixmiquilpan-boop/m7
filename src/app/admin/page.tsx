@@ -506,8 +506,10 @@ export default function AdminPage() {
     if (isFetching.current) return;
     isFetching.current = true;
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
     try {
-      const res = await fetch("/api/submissions");
+      const res = await fetch("/api/submissions", { signal: controller.signal });
       if (res.status === 401) {
         fetch("/api/auth", { method: "DELETE" });
         sessionStorage.removeItem("admin-ok");
@@ -524,9 +526,14 @@ export default function AdminPage() {
       setFetchError(null);
       setSubmissions(await res.json());
       setLastUpdated(new Date());
-    } catch {
-      setFetchError("Error de conexión. Verifica tu internet e intenta de nuevo.");
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        setFetchError("La solicitud tardó demasiado. Verifica tu conexión e intenta de nuevo.");
+      } else {
+        setFetchError("Error de conexión. Verifica tu internet e intenta de nuevo.");
+      }
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
       isFetching.current = false;
     }
