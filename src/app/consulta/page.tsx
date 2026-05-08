@@ -9,7 +9,7 @@ import { Search, ChevronLeft, AlertCircle, Clock, X } from "lucide-react";
 const HISTORY_KEY = "capula-folio-history";
 
 function normalize(v: string) {
-  return v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 14);
+  return v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 15);
 }
 
 function saveHistory(folio: string) {
@@ -35,7 +35,7 @@ export default function ConsultaPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const clean = folio.trim().toUpperCase();
-    if (!/^CAP-2026-[0-9A-F]{4}$/.test(clean)) {
+    if (!/^CAP-2026-[0-9A-F]{4,6}$/.test(clean)) {
       setError("Formato inválido. Ejemplo: CAP-2026-4A2B");
       return;
     }

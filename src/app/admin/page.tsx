@@ -12,6 +12,7 @@ import {
   Users, MapPin, Droplets, CloudRain, LogOut, Download,
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
   FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
+  ArrowUp, ArrowDown, ZoomIn,
 } from "lucide-react";
 
 const AdminMap = dynamic(() => import("@/components/AdminMap"), { ssr: false });
@@ -61,11 +62,17 @@ function photoSrc(path?: string) {
   return `/api/photo?p=${encodeURIComponent(path)}`;
 }
 function folio(id: string) {
-  return `CAP-2026-${id.slice(-4)}`;
+  return `CAP-2026-${id.slice(-6).toUpperCase()}`;
 }
 
 /* ──────────────────── Delete confirm modal ──────────────────── */
 function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onConfirm: () => void; onCancel: () => void }) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onCancel]);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
@@ -153,7 +160,7 @@ function StatCard({ label, value, sub, icon, color = "guinda" }: {
 
 /* ──────────────────── Print ──────────────────── */
 function printSubmission(s: Submission) {
-  const f = `CAP-2026-${s.id.slice(-4).toUpperCase()}`;
+  const f = `CAP-2026-${s.id.slice(-6).toUpperCase()}`;
   const fecha = new Date(s.timestamp).toLocaleString("es-MX", {
     day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
@@ -240,8 +247,17 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
   onStatusChange: (id: string, status: string) => Promise<void>;
   onDelete: (id: string) => void;
 }) {
-  const [status, setStatus]   = useState(s.status ?? "pendiente");
-  const [saving, setSaving]   = useState(false);
+  const [status,   setStatus]   = useState(s.status ?? "pendiente");
+  const [saving,   setSaving]   = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { if (lightbox) setLightbox(null); else onClose(); }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, lightbox]);
 
   async function changeStatus(v: string) {
     setSaving(true);
@@ -304,11 +320,14 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
                   <div key={label} className="space-y-1">
                     <p className="text-[10px] text-gray-400 font-medium text-center truncate">{label}</p>
                     {src ? (
-                      <a href={src} target="_blank" rel="noreferrer" className="block">
-                        <div className="relative h-24 rounded-xl overflow-hidden border border-gray-100 hover:opacity-90 transition-opacity bg-gray-50">
-                          <Image src={src} alt={label} fill className="object-cover" unoptimized />
+                      <button onClick={() => setLightbox(src)} className="block w-full group">
+                        <div className="relative h-24 rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
+                          <Image src={src} alt={label} fill className="object-cover group-hover:scale-105 transition-transform duration-200" unoptimized />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
+                          </div>
                         </div>
-                      </a>
+                      </button>
                     ) : (
                       <div className="h-24 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
                         <p className="text-[10px] text-gray-300 text-center px-1">Sin foto</p>
@@ -364,6 +383,17 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
             })}
           </p>
         </div>
+
+        {/* Lightbox */}
+        {lightbox && (
+          <div className="fixed inset-0 z-[70] bg-black/92 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+            <button onClick={() => setLightbox(null)}
+              className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
+              <X className="w-5 h-5 text-white" strokeWidth={2} />
+            </button>
+            <img src={lightbox} alt="Fotografía" className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+          </div>
+        )}
 
         {/* Acciones */}
         <div className="p-5 border-t border-gray-100 shrink-0 space-y-2">
@@ -421,7 +451,16 @@ export default function AdminPage() {
   const [mountedTabs,     setMountedTabs]     = useState(new Set<string>(["tabla"]));
   const [toast,           setToast]           = useState<{ msg: string; ok: boolean } | null>(null);
   const [lastUpdated,     setLastUpdated]     = useState<Date | null>(null);
+  const [sortKey,         setSortKey]         = useState<keyof Submission>("timestamp");
+  const [sortDir,         setSortDir]         = useState<"asc" | "desc">("desc");
+  const [filterPeriod,    setFilterPeriod]    = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function toggleSort(key: keyof Submission) {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+    setPage(1);
+  }
 
   function showToast(msg: string, ok = true) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -468,6 +507,12 @@ export default function AdminPage() {
       fetchData();
     }
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!authed) return;
+    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 60_000);
+    return () => clearInterval(id);
+  }, [authed, fetchData]);
 
   async function login() {
     if (loginLoading) return;
@@ -562,11 +607,17 @@ export default function AdminPage() {
   const pieDialecto = [{ name: "Habla", value: dialecto }, { name: "No habla", value: total - dialecto }];
 
   /* ── Filter + paginate ── */
+  const now = new Date();
   const filtered = [...submissions]
-    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .filter((s) => {
       if (filterComunidad && s.comunidad !== filterComunidad) return false;
       if (filterStatus && s.status !== filterStatus) return false;
+      if (filterPeriod) {
+        const ts = new Date(s.timestamp);
+        if (filterPeriod === "hoy" && ts.toDateString() !== now.toDateString()) return false;
+        if (filterPeriod === "semana") { const w = new Date(now); w.setDate(now.getDate() - 7); if (ts < w) return false; }
+        if (filterPeriod === "mes" && (ts.getMonth() !== now.getMonth() || ts.getFullYear() !== now.getFullYear())) return false;
+      }
       if (!search) return true;
       const q = search.toLowerCase();
       return (
@@ -575,6 +626,12 @@ export default function AdminPage() {
         s.curp.toLowerCase().includes(q) ||
         folio(s.id).toLowerCase().includes(q)
       );
+    })
+    .sort((a, b) => {
+      const va = String(a[sortKey] ?? "");
+      const vb = String(b[sortKey] ?? "");
+      const cmp = va.localeCompare(vb, "es", { numeric: true });
+      return sortDir === "asc" ? cmp : -cmp;
     });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -771,6 +828,17 @@ export default function AdminPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
                 </div>
+                <div className="relative">
+                  <select value={filterPeriod}
+                    onChange={(e) => { setFilterPeriod(e.target.value); setPage(1); }}
+                    className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
+                    <option value="">Todas las fechas</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="semana">Última semana</option>
+                    <option value="mes">Este mes</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+                </div>
                 <span className="text-xs text-gray-400 shrink-0">
                   {filtered.length} registro{filtered.length !== 1 ? "s" : ""}
                 </span>
@@ -792,8 +860,26 @@ export default function AdminPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 bg-gray-50/80">
-                        {["Folio", "Nombre", "Comunidad", "Tipo", "Sup.", "Estado", "Fecha"].map((h) => (
-                          <th key={h} className="text-left text-xs font-semibold text-gray-500 px-4 py-3 whitespace-nowrap">{h}</th>
+                        <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3 whitespace-nowrap">Folio</th>
+                        {([
+                          ["Nombre",    "nombreCompleto"],
+                          ["Comunidad", "comunidad"],
+                          ["Tipo",      "tipoTierra"],
+                          ["Sup.",      "superficie"],
+                          ["Estado",    "status"],
+                          ["Fecha",     "timestamp"],
+                        ] as [string, keyof Submission][]).map(([label, key]) => (
+                          <th key={key} onClick={() => toggleSort(key)}
+                            className="text-left text-xs font-semibold text-gray-500 px-4 py-3 whitespace-nowrap cursor-pointer hover:text-guinda-700 select-none">
+                            <span className="inline-flex items-center gap-1">
+                              {label}
+                              {sortKey === key
+                                ? sortDir === "asc"
+                                  ? <ArrowUp className="w-3 h-3 text-guinda-600" strokeWidth={2.5} />
+                                  : <ArrowDown className="w-3 h-3 text-guinda-600" strokeWidth={2.5} />
+                                : <ArrowDown className="w-3 h-3 opacity-20" strokeWidth={2} />}
+                            </span>
+                          </th>
                         ))}
                       </tr>
                     </thead>

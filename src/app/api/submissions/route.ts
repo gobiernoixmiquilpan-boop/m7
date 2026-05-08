@@ -73,6 +73,17 @@ export async function POST(req: NextRequest) {
     status: "pendiente",
   };
 
+  // Validar archivos antes de subir
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  for (const field of ["fotoCasa", "fotoINEFrente", "fotoINEAtras"]) {
+    const file = fd.get(field) as File | null;
+    if (!file || file.size === 0) continue;
+    if (!file.type.startsWith("image/"))
+      return NextResponse.json({ error: `La foto "${field}" no es una imagen válida` }, { status: 400 });
+    if (file.size > MAX_FILE_SIZE)
+      return NextResponse.json({ error: `La foto "${field}" supera el límite de 10 MB` }, { status: 400 });
+  }
+
   // Guardar fotos en Storage (privado) — el path se guarda en la columna *Url
   await Promise.all(
     ["fotoCasa", "fotoINEFrente", "fotoINEAtras"].map(async (field) => {

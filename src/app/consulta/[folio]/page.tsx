@@ -69,7 +69,7 @@ export default async function ConsultaFolioPage({
   const { folio: folioRaw } = await params;
   const folio = folioRaw.toUpperCase();
 
-  const match = folio.match(/^CAP-2026-([0-9A-F]{4})$/);
+  const match = folio.match(/^CAP-2026-([0-9A-F]{4,6})$/);
   if (!match) notFound();
 
   const suffix = match[1].toLowerCase();

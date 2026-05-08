@@ -453,7 +453,7 @@ export default function Home() {
   /* ══ Pantalla de éxito — sin conexión ══ */
   if (submitted && submittedOffline) {
     const offlineFolio = submittedOfflineId
-      ? `CAP-2026-${submittedOfflineId.slice(-4).toUpperCase()}`
+      ? `CAP-2026-${submittedOfflineId.slice(-6).toUpperCase()}`
       : null;
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
@@ -507,7 +507,7 @@ export default function Home() {
 
   /* ══ Pantalla de éxito — con conexión ══ */
   if (submitted) {
-    const folioNum = `CAP-2026-${submittedId.slice(-4).toUpperCase()}`;
+    const folioNum = `CAP-2026-${submittedId.slice(-6).toUpperCase()}`;
     return (
       <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center animate-success">
@@ -542,7 +542,7 @@ export default function Home() {
             {copied ? <Check className="w-4 h-4" strokeWidth={2.5} /> : <Copy className="w-4 h-4" strokeWidth={2} />}
             {copied ? "¡Copiado!" : "Copiar número de folio"}
           </button>
-          <Link href={`/consulta/${`CAP-2026-${submittedId.slice(-4).toUpperCase()}`}`}
+          <Link href={`/consulta/${folioNum}`}
             className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-sm font-semibold py-3 rounded-2xl transition-all">
             <Search className="w-4 h-4" strokeWidth={2} /> Ver estado de mi solicitud
           </Link>
