@@ -175,6 +175,7 @@ export default function Home() {
     } catch { return 0; }
   });
   const [loading,     setLoading]     = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors,      setErrors]      = useState<Partial<Record<keyof FormData, string>>>({});
   const [geoLoading,  setGeoLoading]  = useState(false);
   const [geoSeconds,  setGeoSeconds]  = useState(0);
@@ -284,6 +285,7 @@ export default function Home() {
     const e = validateStep(step, form);
     if (Object.keys(e).length > 0) { setErrors(e); return; }
     setLoading(true);
+    setSubmitError(null);
     try {
       const fd = new FormData();
       (Object.entries({
@@ -298,8 +300,37 @@ export default function Home() {
       if (form.fotoINEFrente) fd.append("fotoINEFrente", form.fotoINEFrente);
       if (form.fotoINEAtras)  fd.append("fotoINEAtras",  form.fotoINEAtras);
 
-      const res = await fetch("/api/submissions", { method: "POST", body: fd });
-      if (!res.ok) throw new Error();
+      let res: Response;
+      try {
+        res = await fetch("/api/submissions", { method: "POST", body: fd });
+      } catch {
+        // Error de red real (sin conexión): guardar en cola persistente
+        const offlineId = crypto.randomUUID();
+        const tempId = `q${Date.now()}`;
+        const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
+        try {
+          if (fotoCasa) await savePhoto(`${tempId}_fotoCasa`, fotoCasa);
+          if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
+          if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
+          const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
+          queue.push({ tempId, id: offlineId, draft });
+          localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
+          setPendingCount(queue.length);
+        } catch { /* noop */ }
+        localStorage.removeItem(DRAFT_KEY);
+        setSubmittedOfflineId(offlineId);
+        setSubmittedOffline(true);
+        setSubmitted(true);
+        return;
+      }
+
+      if (!res.ok) {
+        // Error del servidor (4xx/5xx): mostrar mensaje real al usuario
+        const body = await res.json().catch(() => null) as { error?: string } | null;
+        setSubmitError(body?.error ?? `Error del servidor (${res.status}). Intenta de nuevo.`);
+        return;
+      }
+
       const data = await res.json() as { id: string };
       localStorage.removeItem(DRAFT_KEY);
       await deletePhoto("fotoCasa");
@@ -308,24 +339,6 @@ export default function Home() {
       setSubmittedId(data.id);
       setSubmitted(true);
       void drainQueue(); // envía en segundo plano cualquier otra solicitud en cola
-    } catch {
-      // Sin conexión: guardar en la cola persistente con UUID generado localmente
-      const offlineId = crypto.randomUUID();
-      const tempId = `q${Date.now()}`;
-      const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
-      try {
-        if (fotoCasa) await savePhoto(`${tempId}_fotoCasa`, fotoCasa);
-        if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
-        if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
-        const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
-        queue.push({ tempId, id: offlineId, draft });
-        localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
-        setPendingCount(queue.length);
-      } catch { /* noop */ }
-      localStorage.removeItem(DRAFT_KEY);
-      setSubmittedOfflineId(offlineId);
-      setSubmittedOffline(true);
-      setSubmitted(true);
     } finally {
       setLoading(false);
     }
@@ -880,6 +893,13 @@ export default function Home() {
       {/* ── Barra de navegación fija ── */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 pt-4 z-20"
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+        {step === TOTAL_STEPS && submitError && (
+          <div className="max-w-2xl mx-auto mb-3">
+            <p className="text-red-600 text-xs text-center bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={2} /> {submitError}
+            </p>
+          </div>
+        )}
         <div className="max-w-2xl mx-auto flex gap-3">
           {step > 1 ? (
             <button type="button" onClick={prevStep}

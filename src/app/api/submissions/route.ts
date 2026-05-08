@@ -35,7 +35,11 @@ export async function GET(req: NextRequest) {
     .from("submissions")
     .select("*")
     .order("timestamp", { ascending: false });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[GET /api/submissions] ERROR:", error.code, error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  console.log(`[GET /api/submissions] OK — ${data?.length ?? 0} registros`);
   return NextResponse.json(data ?? []);
 }
 
@@ -82,12 +86,16 @@ export async function POST(req: NextRequest) {
           contentType: file.type,
           upsert: false,
         });
-      if (!error) entry[`${field}Url`] = storagePath;
+      if (error) console.error(`[POST /api/submissions] storage upload ${field}:`, error.message);
+      else entry[`${field}Url`] = storagePath;
     })
   );
 
   const { error } = await supabase.from("submissions").insert(entry);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[POST /api/submissions] insert:", error.code, error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ ok: true, id });
 }
 

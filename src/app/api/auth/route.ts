@@ -6,7 +6,10 @@ export async function POST(req: NextRequest) {
   if (!email || !password) return NextResponse.json({ ok: false }, { status: 400 });
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error || !data.session) return NextResponse.json({ ok: false }, { status: 401 });
+  if (error || !data.session) {
+    console.error("[POST /api/auth] login error:", error?.message ?? "no session");
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
 
   const res = NextResponse.json({ ok: true });
   res.cookies.set("admin_token", data.session.access_token, {

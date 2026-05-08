@@ -5,5 +5,6 @@ export async function isAdminAuth(req: NextRequest): Promise<boolean> {
   const token = req.cookies.get("admin_token")?.value;
   if (!token) return false;
   const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error) console.error("[isAdminAuth] getUser error:", error.message);
   return !error && !!user;
 }

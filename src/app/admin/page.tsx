@@ -409,6 +409,7 @@ export default function AdminPage() {
   const [sessionExpired,  setSessionExpired]  = useState(false);
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
   const [loading,         setLoading]         = useState(false);
+  const [fetchError,      setFetchError]      = useState<string | null>(null);
   const [search,          setSearch]          = useState("");
   const [filterComunidad, setFilterComunidad] = useState("");
   const [filterStatus,    setFilterStatus]    = useState("");
@@ -436,7 +437,15 @@ export default function AdminPage() {
         setSessionExpired(true);
         return;
       }
+      if (!res.ok) {
+        const body = await res.json().catch(() => null) as { error?: string } | null;
+        setFetchError(body?.error ?? `Error ${res.status} al cargar registros. Intenta de nuevo.`);
+        return;
+      }
+      setFetchError(null);
       setSubmissions(await res.json());
+    } catch {
+      setFetchError("Error de conexión. Verifica tu internet e intenta de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -591,6 +600,18 @@ export default function AdminPage() {
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+
+        {/* Error de carga */}
+        {fetchError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+            <X className="w-5 h-5 text-red-500 shrink-0" strokeWidth={2} />
+            <p className="text-sm text-red-700 font-medium flex-1">{fetchError}</p>
+            <button onClick={fetchData}
+              className="text-xs font-semibold text-red-600 hover:text-red-800 bg-red-100 hover:bg-red-200 px-3 py-1.5 rounded-lg transition-colors shrink-0">
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
