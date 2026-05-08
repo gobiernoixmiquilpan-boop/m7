@@ -106,10 +106,11 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
 }
 
 /* ──────────────────── Login ──────────────────── */
-function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expired }: {
+function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expired, remaining, blocked }: {
   email: string; setEmail: (v: string) => void;
   pw: string; setPw: (v: string) => void;
   onLogin: () => void; loading: boolean; error: boolean; expired: boolean;
+  remaining: number | null; blocked: boolean;
 }) {
   return (
     <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
@@ -123,19 +124,35 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
           <input
             type="email" placeholder="Correo electrónico" value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onLogin()}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
+            onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
+            disabled={blocked}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
           />
           <input
             type="password" placeholder="Contraseña" value={pw}
             onChange={(e) => setPw(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onLogin()}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
+            onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
+            disabled={blocked}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
           />
         </div>
         {expired && <p className="text-xs text-yellow-600 mb-3 font-medium">Sesión expirada. Vuelve a ingresar.</p>}
-        {error   && <p className="text-xs text-red-500 mb-3">Correo o contraseña incorrectos.</p>}
-        <button onClick={onLogin} disabled={loading}
+        {blocked && (
+          <p className="text-xs text-red-600 mb-3 font-semibold bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            Acceso bloqueado por 15 minutos por demasiados intentos fallidos.
+          </p>
+        )}
+        {error && !blocked && (
+          <div className="mb-3">
+            <p className="text-xs text-red-500">Correo o contraseña incorrectos.</p>
+            {remaining !== null && remaining <= 2 && remaining > 0 && (
+              <p className="text-xs text-orange-500 mt-1 font-semibold">
+                {remaining} intento{remaining !== 1 ? "s" : ""} restante{remaining !== 1 ? "s" : ""} antes del bloqueo.
+              </p>
+            )}
+          </div>
+        )}
+        <button onClick={onLogin} disabled={loading || blocked}
           className="w-full bg-guinda-700 hover:bg-guinda-800 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
           {loading && <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />}
           {loading ? "Ingresando…" : "Ingresar"}
@@ -445,6 +462,8 @@ export default function AdminPage() {
   const [pw,              setPw]              = useState("");
   const [loginLoading,    setLoginLoading]    = useState(false);
   const [loginError,      setLoginError]      = useState(false);
+  const [loginBlocked,    setLoginBlocked]    = useState(false);
+  const [loginRemaining,  setLoginRemaining]  = useState<number | null>(null);
   const [sessionExpired,  setSessionExpired]  = useState(false);
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
   const [loading,         setLoading]         = useState(false);
@@ -532,14 +551,18 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authed) return;
-    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 60_000);
-    return () => clearInterval(id);
+    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 5_000);
+    const onVisible = () => { if (!document.hidden) fetchData(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [authed, fetchData]);
 
   async function login() {
-    if (loginLoading) return;
+    if (loginLoading || loginBlocked) return;
     setLoginLoading(true);
     setLoginError(false);
+    setLoginBlocked(false);
+    setLoginRemaining(null);
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
@@ -550,8 +573,13 @@ export default function AdminPage() {
         sessionStorage.setItem("admin-ok", "1");
         setAuthed(true);
         fetchData();
+      } else if (res.status === 429) {
+        setLoginBlocked(true);
+        setPw("");
       } else {
+        const body = await res.json().catch(() => null) as { remaining?: number } | null;
         setLoginError(true);
+        setLoginRemaining(body?.remaining ?? null);
         setPw("");
       }
     } catch {
@@ -620,7 +648,7 @@ export default function AdminPage() {
       </main>
     );
   }
-  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} />;
+  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} remaining={loginRemaining} blocked={loginBlocked} />;
 
   /* ── Stats ── */
   const total    = submissions.length;
