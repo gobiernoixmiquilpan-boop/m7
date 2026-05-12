@@ -20,8 +20,8 @@ export async function generateMetadata({
 
 const STATUS_MAP = {
   pendiente: {
-    label: "Pendiente",
-    description: "Tu solicitud fue recibida y está en espera de revisión.",
+    label: "Pendiente de revisión",
+    description: "Tu solicitud fue recibida correctamente y está en fila de espera. Recibirás atención en orden de llegada.",
     Icon: Clock,
     cardBg: "bg-gray-50",
     cardBorder: "border-gray-200",
@@ -31,7 +31,7 @@ const STATUS_MAP = {
   },
   revision: {
     label: "En revisión",
-    description: "Un funcionario municipal está revisando tu solicitud.",
+    description: "Un funcionario municipal está analizando tu expediente. No es necesario que acudas a la oficina por el momento.",
     Icon: Clock,
     cardBg: "bg-yellow-50",
     cardBorder: "border-yellow-200",
@@ -41,7 +41,7 @@ const STATUS_MAP = {
   },
   aprobado: {
     label: "Aprobado",
-    description: "¡Tu solicitud fue aprobada! Pronto recibirás más información.",
+    description: "¡Tu solicitud fue aprobada! Acude a la Contraloría Municipal con tu folio para recoger tu documentación oficial.",
     Icon: CheckCircle,
     cardBg: "bg-emerald-50",
     cardBorder: "border-emerald-200",
@@ -50,8 +50,8 @@ const STATUS_MAP = {
     iconColor: "text-emerald-600",
   },
   rechazado: {
-    label: "Rechazado",
-    description: "Tu solicitud no pudo ser aprobada. Acude a la ventanilla municipal para más información.",
+    label: "No aprobado",
+    description: "Tu solicitud no pudo ser aprobada en esta etapa. Acude a la ventanilla municipal con tu folio para conocer los motivos y opciones.",
     Icon: XCircle,
     cardBg: "bg-red-50",
     cardBorder: "border-red-200",

@@ -1,8 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
+import { detectLote } from "@/lib/pointInPolygon";
+import { LOTES, type Lote } from "@/lib/lots";
+
+const LotesMapDynamic = dynamic(() => import("@/components/LotesMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[280px] bg-gray-100 rounded-xl animate-pulse flex items-center justify-center text-xs text-gray-400">
+      Cargando mapa…
+    </div>
+  ),
+});
 import {
   Info, Home as HomeIcon, CreditCard, MapPin,
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
@@ -32,7 +44,7 @@ interface FormData {
 const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
 const DRAFT_KEY   = "capula-draft";
 const PENDING_KEY = "capula-pending-queue";
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const getDB = async () => {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -82,6 +94,7 @@ const STEP_TITLES = [
   "Datos de contacto",
   "Datos del predio",
   "Dialecto ñhañhu",
+  "Revisión y confirmación",
 ];
 
 const emptyForm: FormData = {
@@ -107,8 +120,7 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(f.curp)) e.curp    = "CURP inválida";
   }
   if (step === 6) {
-    if (!f.predio.trim())    e.predio    = "Requerido";
-    if (!f.lote.trim())      e.lote      = "Requerido";
+    if (!f.lote.trim())      e.lote      = "Selecciona tu lote en el mapa";
     if (!f.tipoTierra)       e.tipoTierra = "Seleccione una opción";
     const sup = parseFloat(f.superficie);
     if (!f.superficie.trim() || isNaN(sup) || sup <= 0) e.superficie = "Debe ser mayor a 0";
@@ -182,10 +194,12 @@ export default function Home() {
   const [compressing,  setCompressing]  = useState(false);
   const [copied,       setCopied]       = useState(false);
   const [submitError,  setSubmitError]  = useState<string | null>(null);
+  const [submitFolio,  setSubmitFolio]  = useState<string | null>(null);
   const [errors,      setErrors]      = useState<Partial<Record<keyof FormData, string>>>({});
-  const [geoLoading,  setGeoLoading]  = useState(false);
-  const [geoSeconds,  setGeoSeconds]  = useState(0);
-  const [geoError,    setGeoError]    = useState<string | null>(null);
+  const [geoLoading,    setGeoLoading]    = useState(false);
+  const [geoSeconds,    setGeoSeconds]    = useState(0);
+  const [geoError,      setGeoError]      = useState<string | null>(null);
+  const [detectedLote,  setDetectedLote]  = useState<Lote | null>(null);
   const geoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showSaved,   setShowSaved]   = useState(false);
   const [offline,     setOffline]     = useState(false);
@@ -194,6 +208,7 @@ export default function Home() {
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stepDir       = useRef<"forward" | "back">("forward");
   const retryTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDraining    = useRef(false);
 
   /* ── Draft save ── */
   useEffect(() => {
@@ -242,6 +257,11 @@ export default function Home() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [step, submitted, form.nombreCompleto, form.comunidad, form.ubicacion, form.fotoCasa]);
+
+  /* ── Geo timer cleanup ── */
+  useEffect(() => {
+    return () => { if (geoTimer.current) clearInterval(geoTimer.current); };
+  }, []);
 
   /* ── PWA install prompt ── */
   useEffect(() => {
@@ -311,6 +331,7 @@ export default function Home() {
     setErrors({});
     setLoading(true);
     setSubmitError(null);
+    setSubmitFolio(null);
     try {
       const fd = new FormData();
       (Object.entries({
@@ -350,9 +371,9 @@ export default function Home() {
       }
 
       if (!res.ok) {
-        // Error del servidor (4xx/5xx): mostrar mensaje real al usuario
-        const body = await res.json().catch(() => null) as { error?: string } | null;
+        const body = await res.json().catch(() => null) as { error?: string; folio?: string } | null;
         setSubmitError(body?.error ?? `Error del servidor (${res.status}). Intenta de nuevo.`);
+        if (res.status === 409 && body?.folio) setSubmitFolio(body.folio);
         return;
       }
 
@@ -370,9 +391,11 @@ export default function Home() {
   }
 
   async function drainQueue() {
+    if (isDraining.current) return;
+    isDraining.current = true;
     let queue: QueueItem[] = [];
-    try { queue = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]"); } catch { return; }
-    if (queue.length === 0) return;
+    try { queue = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]"); } catch { isDraining.current = false; return; }
+    if (queue.length === 0) { isDraining.current = false; return; }
 
     const remaining: QueueItem[] = [];
     for (const item of queue) {
@@ -390,7 +413,15 @@ export default function Home() {
         if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
 
         const res = await fetch("/api/submissions", { method: "POST", body: fd });
-        if (!res.ok) throw new Error();
+
+        // 4xx = terminal error (bad data, CURP duplicate, etc.) — drop item from queue
+        if (res.status >= 400 && res.status < 500) {
+          await deletePhoto(`${item.tempId}_fotoCasa`);
+          await deletePhoto(`${item.tempId}_fotoINEFrente`);
+          await deletePhoto(`${item.tempId}_fotoINEAtras`);
+          continue;
+        }
+        if (!res.ok) throw new Error("server_error");
 
         await deletePhoto(`${item.tempId}_fotoCasa`);
         await deletePhoto(`${item.tempId}_fotoINEFrente`);
@@ -406,6 +437,7 @@ export default function Home() {
       localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
     }
     setPendingCount(remaining.length);
+    isDraining.current = false;
   }
 
   function discardDraft() {
@@ -417,6 +449,7 @@ export default function Home() {
   function reset() {
     setSubmitted(false); setSubmittedId(""); setSubmittedOffline(false); setSubmittedOfflineId(""); setStep(1);
     setForm(emptyForm);
+    setDetectedLote(null);
     setPreviews((p) => {
       if (p.fotoCasa)      URL.revokeObjectURL(p.fotoCasa);
       if (p.fotoINEFrente) URL.revokeObjectURL(p.fotoINEFrente);
@@ -445,6 +478,7 @@ export default function Home() {
         const lng = parseFloat(pos.coords.longitude.toFixed(6));
         setForm((p) => ({ ...p, ubicacion: `${lat}, ${lng}`, lat, lng }));
         setErrors((p) => ({ ...p, ubicacion: undefined }));
+        setDetectedLote(detectLote(lat, lng));
         setGeoLoading(false);
       },
       (err) => {
@@ -628,7 +662,7 @@ export default function Home() {
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-bold text-white">Nueva solicitud</p>
-              <p className="text-xs text-guinda-200 mt-0.5">Registra tu terreno por primera vez</p>
+              <p className="text-xs text-guinda-200 mt-0.5">Registra tu terreno · aprox. 5 minutos</p>
             </div>
             <ChevronDown className="w-5 h-5 text-guinda-300 -rotate-90 shrink-0" strokeWidth={2} />
           </button>
@@ -800,8 +834,8 @@ export default function Home() {
         {step === 2 && (
           <>
             <Card title="Ubicación del predio" hasError={!!errors.ubicacion}>
-              <TextInput placeholder="Ej: Calle Hidalgo s/n, Capula" value={form.ubicacion}
-                onChange={(v) => setForm((p) => ({ ...p, ubicacion: v, lat: null, lng: null }))}
+              <TextInput placeholder="Ej: Calle Hidalgo s/n, frente a la iglesia" value={form.ubicacion}
+                onChange={(v) => { setForm((p) => ({ ...p, ubicacion: v, lat: null, lng: null })); setDetectedLote(null); }}
                 error={errors.ubicacion} />
               <button type="button" onClick={useGeo} disabled={geoLoading}
                 className="mt-3 inline-flex items-center justify-center gap-2 text-sm text-guinda-700 hover:text-guinda-900 font-medium bg-guinda-50 hover:bg-guinda-100 border border-guinda-200 px-3.5 py-2.5 rounded-xl transition-all w-full disabled:opacity-60">
@@ -825,8 +859,8 @@ export default function Home() {
         {/* PASO 3 · Nombre */}
         {step === 3 && (
           <Card title="Nombre completo" hasError={!!errors.nombreCompleto}>
-            <p className="text-xs text-gray-400 mb-3">Escríbelo tal como aparece en tu INE.</p>
-            <TextInput placeholder="Apellido Paterno Materno Nombre(s)" value={form.nombreCompleto}
+            <p className="text-xs text-gray-400 mb-3">Escríbelo tal como aparece en tu INE, empezando por apellidos.</p>
+            <TextInput placeholder="Ej: García López María" value={form.nombreCompleto}
               onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v }))} error={errors.nombreCompleto} />
           </Card>
         )}
@@ -893,16 +927,86 @@ export default function Home() {
         {/* PASO 6 · Datos del predio */}
         {step === 6 && (
           <>
-            <div className="grid grid-cols-2 gap-3.5">
-              <Card title="Predio" hasError={!!errors.predio}>
-                <TextInput placeholder="Núm. de predio" value={form.predio}
-                  onChange={(v) => setForm((p) => ({ ...p, predio: v }))} error={errors.predio} />
-              </Card>
-              <Card title="Lote" hasError={!!errors.lote}>
-                <TextInput placeholder="Núm. de lote" value={form.lote}
-                  onChange={(v) => setForm((p) => ({ ...p, lote: v }))} error={errors.lote} />
-              </Card>
+            {/* Banner GPS auto-detect */}
+            {detectedLote && !form.lote && (
+              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
+                <MapPin className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-blue-800">Tu GPS detectó un lote</p>
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    Predio {detectedLote.predioNum} · Lote {detectedLote.loteNum}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm((p) => ({ ...p, lote: detectedLote.loteNum, predio: detectedLote.predioNum }));
+                    setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
+                  }}
+                  className="text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded-xl transition-all shrink-0"
+                >
+                  Usar
+                </button>
+              </div>
+            )}
+
+            {/* Mapa de lotes */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
+                <p className="text-sm font-semibold text-gray-700">Identifica tu lote en el mapa</p>
+                <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color de tu lote — predio y lote se llenan solos</p>
+              </div>
+              <div className="p-2">
+                <LotesMapDynamic
+                  lat={form.lat}
+                  lng={form.lng}
+                  selectedLote={form.lote}
+                  onSelectLote={(loteNum, predioNum) => {
+                    setForm((p) => ({
+                      ...p,
+                      lote: loteNum,
+                      predio: predioNum || p.predio,
+                    }));
+                    setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
+                  }}
+                  height={320}
+                />
+              </div>
             </div>
+
+            {/* Lote seleccionado */}
+            {(() => {
+              const loteObj = LOTES.find((l) => l.loteNum === form.lote);
+              return form.lote ? (
+                <div className="rounded-2xl border-2 border-guinda-300 bg-guinda-50/60 p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-xs"
+                    style={{ background: loteObj?.color ?? "#6e112c" }}>
+                    {form.lote.split("-").pop()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-guinda-500 uppercase tracking-widest">Lote seleccionado</p>
+                    <p className="text-base font-bold text-gray-800 leading-tight">{form.lote}</p>
+                    <p className="text-xs text-gray-400">Predio {form.predio}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setForm((p) => ({ ...p, lote: "", predio: "" })); }}
+                    className="p-1.5 rounded-xl text-guinda-400 hover:text-guinda-700 hover:bg-guinda-100 transition-all shrink-0"
+                    title="Cambiar lote"
+                    aria-label="Quitar selección de lote"
+                  >
+                    <X className="w-4 h-4" strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <div className={`rounded-2xl border-2 border-dashed p-5 flex flex-col items-center gap-2 text-center ${errors.lote ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50"}`}>
+                  <MapPin className={`w-7 h-7 ${errors.lote ? "text-red-300" : "text-gray-300"}`} strokeWidth={1.5} />
+                  <p className={`text-sm font-medium ${errors.lote ? "text-red-500" : "text-gray-400"}`}>
+                    {errors.lote ?? "Toca tu lote en el mapa para seleccionarlo"}
+                  </p>
+                </div>
+              );
+            })()}
             <Card title="Tipo de tierra" hasError={!!errors.tipoTierra}>
               <RadioGroup
                 options={[
@@ -917,6 +1021,7 @@ export default function Home() {
               <TextInput placeholder="Ej: 2.5" value={form.superficie} inputMode="decimal"
                 onChange={(v) => setForm((p) => ({ ...p, superficie: v.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1") }))}
                 error={errors.superficie} suffix="ha" />
+              <p className="text-xs text-gray-400 mt-1.5">Escribe la superficie en hectáreas (ha)</p>
             </Card>
           </>
         )}
@@ -936,6 +1041,87 @@ export default function Home() {
             </Card>
           </>
         )}
+
+        {/* PASO 8 · Revisión y confirmación */}
+        {step === 8 && (
+          <>
+            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
+              <Info className="w-4 h-4 text-amber-600 mt-px shrink-0" strokeWidth={2} />
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Revisa cuidadosamente tus datos antes de enviar. Una vez enviada no podrás modificar tu solicitud.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">Datos personales</p>
+                <button type="button"
+                  onClick={() => { setErrors({}); stepDir.current = "back"; setStep(5); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  className="text-xs text-guinda-600 hover:text-guinda-800 font-semibold">
+                  Editar →
+                </button>
+              </div>
+              <div className="px-5 divide-y divide-gray-100">
+                <ReviewRow label="Nombre" value={form.nombreCompleto} />
+                <ReviewRow label="CURP" value={form.curp} mono />
+                <ReviewRow label="Celular" value={form.celular} />
+                <ReviewRow label="Comunidad" value={form.comunidad} />
+                <ReviewRow label="Habla ñhañhu" value={form.hablaDialecto === "si" ? "Sí" : "No"} />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">Datos del predio</p>
+                <button type="button"
+                  onClick={() => { setErrors({}); stepDir.current = "back"; setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  className="text-xs text-guinda-600 hover:text-guinda-800 font-semibold">
+                  Editar →
+                </button>
+              </div>
+              <div className="px-5 divide-y divide-gray-100">
+                <ReviewRow label="Ubicación" value={form.ubicacion} />
+                {form.lat != null && form.lng != null && (
+                  <ReviewRow label="GPS" value={`${form.lat}, ${form.lng}`} mono />
+                )}
+                <ReviewRow label="Predio" value={form.predio} />
+                <ReviewRow label="Lote" value={form.lote} />
+                <ReviewRow label="Tipo" value={form.tipoTierra === "riego" ? "Riego" : "Temporal"} />
+                <ReviewRow label="Superficie" value={`${form.superficie} ha`} />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">Fotografías</p>
+                <button type="button"
+                  onClick={() => { setErrors({}); stepDir.current = "back"; setStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                  className="text-xs text-guinda-600 hover:text-guinda-800 font-semibold">
+                  Editar →
+                </button>
+              </div>
+              <div className="px-5 py-4 grid grid-cols-3 gap-3">
+                {(["fotoCasa", "fotoINEFrente", "fotoINEAtras"] as const).map((key, i) => {
+                  const label = ["Foto de casa", "INE frente", "INE reverso"][i];
+                  return (
+                    <div key={key} className="flex flex-col items-center gap-1.5">
+                      <p className="text-[10px] text-gray-400 font-medium text-center">{label}</p>
+                      {previews[key] ? (
+                        <div className="relative w-full h-24 rounded-xl overflow-hidden border border-gray-100">
+                          <Image src={previews[key]!} alt={label} fill className="object-cover" unoptimized />
+                        </div>
+                      ) : (
+                        <div className="w-full h-24 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                          <p className="text-[10px] text-gray-300">Sin foto</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Barra de navegación fija ── */}
@@ -946,6 +1132,14 @@ export default function Home() {
             <p className="text-red-600 text-xs text-center bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={2} /> {submitError}
             </p>
+            {submitFolio && (
+              <div className="mt-1.5 text-center">
+                <Link href={`/consulta/${submitFolio}`}
+                  className="text-xs text-guinda-700 underline font-semibold">
+                  Consultar folio {submitFolio} →
+                </Link>
+              </div>
+            )}
           </div>
         )}
         <div className="max-w-2xl mx-auto flex gap-3">
@@ -1067,6 +1261,15 @@ function RadioGroup({ options, value, onChange, error }: {
       </div>
       {error && <FieldError msg={error} />}
     </>
+  );
+}
+
+function ReviewRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between py-2.5 gap-3">
+      <span className="text-xs text-gray-400 font-medium shrink-0">{label}</span>
+      <span className={`text-sm text-gray-700 text-right break-all ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
   );
 }
 

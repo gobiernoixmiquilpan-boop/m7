@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -8,12 +8,32 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { LOTES } from "@/lib/lots";
 import {
   Users, MapPin, Droplets, CloudRain, LogOut, Download,
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
   FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
   ArrowUp, ArrowDown, ZoomIn,
 } from "lucide-react";
+
+function Eye({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function EyeOff({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+      <line x1="2" x2="22" y1="2" y2="22" />
+    </svg>
+  );
+}
 
 const AdminMap = dynamic(() => import("@/components/AdminMap"), {
   ssr: false,
@@ -79,6 +99,10 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onCancel]);
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -112,6 +136,7 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
   onLogin: () => void; loading: boolean; error: boolean; expired: boolean;
   remaining: number | null; blocked: boolean;
 }) {
+  const [showPw, setShowPw] = useState(false);
   return (
     <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
       <div className="bg-white rounded-3xl shadow-xl p-8 max-w-xs w-full text-center">
@@ -128,13 +153,24 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
             disabled={blocked}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
           />
-          <input
-            type="password" placeholder="Contraseña" value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
-            disabled={blocked}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
-          />
+          <div className="relative">
+            <input
+              type={showPw ? "text" : "password"} placeholder="Contraseña" value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
+              disabled={blocked}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              tabIndex={-1}
+              aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
         {expired && <p className="text-xs text-yellow-600 mb-3 font-medium">Sesión expirada. Vuelve a ingresar.</p>}
         {blocked && (
@@ -282,6 +318,10 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose, lightbox]);
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   async function changeStatus(v: string) {
     setSaving(true);
@@ -410,12 +450,13 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
 
         {/* Lightbox */}
         {lightbox && (
-          <div className="fixed inset-0 z-[70] bg-black/92 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <div className="fixed inset-0 z-[70] bg-black/92 flex flex-col items-center justify-center p-4 gap-3" onClick={() => setLightbox(null)}>
             <button onClick={() => setLightbox(null)}
               className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
               <X className="w-5 h-5 text-white" strokeWidth={2} />
             </button>
-            <img src={lightbox} alt="Fotografía" className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+            <img src={lightbox} alt="Fotografía" className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
+            <p className="text-white/40 text-xs">Toca fuera de la imagen o presiona ESC para cerrar</p>
           </div>
         )}
 
@@ -456,6 +497,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
 
 /* ──────────────────── Admin principal ──────────────────── */
 export default function AdminPage() {
+  useEffect(() => { document.title = "Panel Administrativo · Capula 2026"; }, []);
   const [authed,          setAuthed]          = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") === "1");
   const [checkingAuth,    setCheckingAuth]    = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") !== "1");
   const [email,           setEmail]           = useState("");
@@ -528,8 +570,8 @@ export default function AdminPage() {
         return;
       }
       setFetchError(null);
-      setSubmissions(await res.json());
-      setLastUpdated(new Date());
+      const data = await res.json().catch(() => null) as Submission[] | null;
+      if (data) { setSubmissions(data); setLastUpdated(new Date()); }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         setFetchError("La solicitud tardó demasiado. Verifica tu conexión e intenta de nuevo.");
@@ -558,7 +600,8 @@ export default function AdminPage() {
       if (cp) params.set("period",    cp);
       const res = await fetch(`/api/submissions?${params}`);
       if (!res.ok) return;
-      const body = await res.json() as { data: Submission[]; total: number };
+      const body = await res.json().catch(() => null) as { data: Submission[]; total: number } | null;
+      if (!body) return;
       setTableData(body.data);
       setTableTotal(body.total);
     } catch { /* network */ }
@@ -600,13 +643,27 @@ export default function AdminPage() {
   // Supabase Realtime vía SSE (reemplaza el polling de 5 s)
   useEffect(() => {
     if (!authed) return;
-    const es = new EventSource("/api/submissions/stream");
-    es.onmessage = () => {
-      if (document.hidden) return;
-      fetchData();
-      const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd } = tableParamsRef.current;
-      fetchPage(pg, s, cc, cs, cp, sk, sd);
-    };
+
+    let es: EventSource;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      es = new EventSource("/api/submissions/stream");
+      es.onmessage = () => {
+        if (document.hidden) return;
+        fetchData();
+        const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd } = tableParamsRef.current;
+        fetchPage(pg, s, cc, cs, cp, sk, sd);
+      };
+      es.onerror = () => {
+        es.close();
+        // Reintenta conexión en 10 segundos
+        reconnectTimer = setTimeout(() => { if (document.visibilityState !== "hidden") connect(); }, 10_000);
+      };
+    }
+
+    connect();
+
     const onVisible = () => {
       if (document.hidden) return;
       fetchData();
@@ -616,6 +673,7 @@ export default function AdminPage() {
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [authed, fetchData, fetchPage]);
@@ -694,7 +752,7 @@ export default function AdminPage() {
       new Date(s.timestamp).toLocaleDateString("es-MX"),
     ]);
     const sanitize = (v: string | number | undefined) => {
-      const s = String(v ?? "");
+      const s = String(v ?? "").replace(/"/g, '""');
       return /^[=+\-@|]/.test(s) ? `'${s}` : s;
     };
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${sanitize(v)}"`).join(",")).join("\n");
@@ -716,14 +774,44 @@ export default function AdminPage() {
   }
   if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} remaining={loginRemaining} blocked={loginBlocked} />;
 
-  /* ── Stats ── */
-  const total    = submissions.length;
-  const withGps  = submissions.filter((s) => s.lat && s.lng);
-  const riego    = submissions.filter((s) => s.tipoTierra === "riego").length;
-  const temporal = submissions.filter((s) => s.tipoTierra === "temporal").length;
-  const dialecto = submissions.filter((s) => s.hablaDialecto === "si").length;
+  /* ── Filter (memoizado para no recalcular en cada render) ── */
+  const filtered = useMemo(() => {
+    const _now = new Date();
+    return [...submissions]
+      .filter((s) => {
+        if (filterComunidad && s.comunidad !== filterComunidad) return false;
+        if (filterStatus && s.status !== filterStatus) return false;
+        if (filterPeriod) {
+          const ts = new Date(s.timestamp);
+          if (filterPeriod === "hoy" && ts.toDateString() !== _now.toDateString()) return false;
+          if (filterPeriod === "semana") { const w = new Date(_now); w.setDate(_now.getDate() - 7); if (ts < w) return false; }
+          if (filterPeriod === "mes" && (ts.getMonth() !== _now.getMonth() || ts.getFullYear() !== _now.getFullYear())) return false;
+        }
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return (
+          s.nombreCompleto.toLowerCase().includes(q) ||
+          s.comunidad.toLowerCase().includes(q) ||
+          s.curp.toLowerCase().includes(q) ||
+          folio(s.id).toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        const va = String(a[sortKey] ?? "");
+        const vb = String(b[sortKey] ?? "");
+        const cmp = va.localeCompare(vb, "es", { numeric: true });
+        return sortDir === "asc" ? cmp : -cmp;
+      });
+  }, [submissions, filterComunidad, filterStatus, filterPeriod, search, sortKey, sortDir]);
+
+  /* ── Stats (usando filtered para reflejar filtros activos) ── */
+  const total    = filtered.length;
+  const withGps  = filtered.filter((s) => s.lat && s.lng);
+  const riego    = filtered.filter((s) => s.tipoTierra === "riego").length;
+  const temporal = filtered.filter((s) => s.tipoTierra === "temporal").length;
+  const dialecto = filtered.filter((s) => s.hablaDialecto === "si").length;
   const avgSup   = total
-    ? (submissions.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0) / total).toFixed(2)
+    ? (filtered.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0) / total).toFixed(2)
     : "0";
 
   const byComunidad = COMUNIDADES.map((c) => ({
@@ -731,36 +819,14 @@ export default function AdminPage() {
     solicitudes: submissions.filter((s) => s.comunidad === c).length,
   })).filter((d) => d.solicitudes > 0);
 
+  const byLote = LOTES.filter((l) => l.loteNum).map((l) => ({
+    name: l.loteNum,
+    solicitudes: submissions.filter((s) => s.lote === l.loteNum).length,
+    fill: l.fillColor,
+  }));
+
   const pieTierra   = [{ name: "Riego", value: riego }, { name: "Temporal", value: temporal }];
   const pieDialecto = [{ name: "Habla", value: dialecto }, { name: "No habla", value: total - dialecto }];
-
-  /* ── Filter + paginate ── */
-  const now = new Date();
-  const filtered = [...submissions]
-    .filter((s) => {
-      if (filterComunidad && s.comunidad !== filterComunidad) return false;
-      if (filterStatus && s.status !== filterStatus) return false;
-      if (filterPeriod) {
-        const ts = new Date(s.timestamp);
-        if (filterPeriod === "hoy" && ts.toDateString() !== now.toDateString()) return false;
-        if (filterPeriod === "semana") { const w = new Date(now); w.setDate(now.getDate() - 7); if (ts < w) return false; }
-        if (filterPeriod === "mes" && (ts.getMonth() !== now.getMonth() || ts.getFullYear() !== now.getFullYear())) return false;
-      }
-      if (!search) return true;
-      const q = search.toLowerCase();
-      return (
-        s.nombreCompleto.toLowerCase().includes(q) ||
-        s.comunidad.toLowerCase().includes(q) ||
-        s.curp.toLowerCase().includes(q) ||
-        folio(s.id).toLowerCase().includes(q)
-      );
-    })
-    .sort((a, b) => {
-      const va = String(a[sortKey] ?? "");
-      const vb = String(b[sortKey] ?? "");
-      const cmp = va.localeCompare(vb, "es", { numeric: true });
-      return sortDir === "asc" ? cmp : -cmp;
-    });
 
   const totalPages = Math.max(1, Math.ceil(tableTotal / PAGE_SIZE));
 
@@ -865,14 +931,18 @@ export default function AdminPage() {
                   {withGps.length} con GPS
                 </span>
               </div>
-              {withGps.length > 0 ? (
-                <AdminMap submissions={withGps as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number; lng: number; tipoTierra: string; superficie: string; predio: string; lote: string }[]} />
-              ) : (
-                <div className="h-64 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
-                  <MapPin className="w-10 h-10 mb-2 opacity-30" strokeWidth={1} />
-                  <p className="text-sm">Sin solicitudes con coordenadas GPS</p>
-                  <p className="text-xs mt-1 text-center px-8">Los registros aparecerán cuando los ciudadanos usen &ldquo;Ubicación actual&rdquo;</p>
-                </div>
+              <AdminMap
+                submissions={withGps as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number; lng: number; tipoTierra: string; superficie: string; predio: string; lote: string }[]}
+                onSelectSubmission={(id) => {
+                  const sub = submissions.find((s) => s.id === id);
+                  if (sub) setSelected(sub);
+                }}
+              />
+              {withGps.length === 0 && (
+                <p className="text-xs text-gray-400 text-center mt-3 flex items-center justify-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 opacity-50" strokeWidth={2} />
+                  Los marcadores de solicitudes aparecen cuando los ciudadanos comparten su GPS
+                </p>
               )}
             </div>
           </div>
@@ -896,6 +966,23 @@ export default function AdminPage() {
                   </ResponsiveContainer>
                 ) : <p className="text-gray-400 text-sm text-center py-10">Sin datos aún</p>}
               </div>
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="font-bold text-gray-800 mb-4">Solicitudes por lote</h2>
+                {byLote.some((d) => d.solicitudes > 0) ? (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={byLote} barSize={32}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #f3f4f6", fontSize: 12 }} cursor={{ fill: "#fdf1f4" }} />
+                      <Bar dataKey="solicitudes" radius={[6, 6, 0, 0]}>
+                        {byLote.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <p className="text-gray-400 text-sm text-center py-10">Sin datos aún</p>}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   { title: "Tipo de tierra", data: pieTierra, colors: [G, G3], show: riego + temporal > 0 },
@@ -931,7 +1018,7 @@ export default function AdminPage() {
               <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-100">
                 <div className="relative flex-1 min-w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
-                  <input type="text" placeholder="Buscar por nombre, comunidad o CURP…"
+                  <input type="text" placeholder="Buscar por nombre, CURP o folio…"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
@@ -991,6 +1078,7 @@ export default function AdminPage() {
                         {([
                           ["Nombre",    "nombreCompleto"],
                           ["Comunidad", "comunidad"],
+                          ["Lote",      "lote"],
                           ["Tipo",      "tipoTierra"],
                           ["Sup.",      "superficie"],
                           ["Estado",    "status"],
@@ -1017,6 +1105,7 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>
                           <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{s.nombreCompleto}</td>
                           <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{s.comunidad}</td>
+                          <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">{s.lote || "—"}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${s.tipoTierra === "riego" ? "bg-blue-50 text-blue-700" : "bg-sky-50 text-sky-700"}`}>
                               {s.tipoTierra === "riego" ? "Riego" : "Temporal"}

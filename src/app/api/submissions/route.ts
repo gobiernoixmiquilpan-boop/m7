@@ -21,7 +21,6 @@ function validatePost(fd: FormData): string | null {
   if (!ubicacion)                                          return "ubicacion requerida";
   if (!/^\d{10}$/.test(celular))                          return "celular inválido (10 dígitos)";
   if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curp)) return "CURP inválida";
-  if (!predio)                                             return "predio requerido";
   if (!lote)                                               return "lote requerido";
   if (!["riego", "temporal"].includes(tipoTierra))         return "tipoTierra inválido";
   if (!superficie || isNaN(parseFloat(superficie)) || parseFloat(superficie) <= 0) return "superficie inválida";
@@ -37,7 +36,7 @@ export async function GET(req: NextRequest) {
     const p          = req.nextUrl.searchParams;
     const pageParam  = p.get("page");
     const limit      = Math.min(100, Math.max(1, parseInt(p.get("limit") ?? "20") || 20));
-    const search     = p.get("search")?.trim() ?? "";
+    const search     = (p.get("search")?.trim() ?? "").slice(0, 200);
     const comunidad  = p.get("comunidad") ?? "";
     const status     = p.get("status") ?? "";
     const period     = p.get("period") ?? "";
@@ -98,6 +97,21 @@ export async function POST(req: NextRequest) {
 
   const validationError = validatePost(fd);
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
+
+  // CURP duplicate check
+  const curpValue = (fd.get("curp") as string | null)?.trim() ?? "";
+  const { data: existingCurp } = await supabase
+    .from("submissions")
+    .select("id")
+    .eq("curp", curpValue)
+    .maybeSingle();
+  if (existingCurp) {
+    const existingFolio = `CAP-2026-${existingCurp.id.slice(-6).toUpperCase()}`;
+    return NextResponse.json(
+      { error: `Esta CURP ya fue registrada. Folio existente: ${existingFolio}`, folio: existingFolio },
+      { status: 409 }
+    );
+  }
 
   const latRaw   = fd.get("lat") as string | null;
   const lngRaw   = fd.get("lng") as string | null;
@@ -175,7 +189,10 @@ const VALID_STATUSES = ["pendiente", "revision", "aprobado", "rechazado"] as con
 
 export async function PATCH(req: NextRequest) {
   return withAdminAuth(req, async () => {
-    const { id, status } = await req.json() as { id: string; status: string };
+    let body: { id?: string; status?: string };
+    try { body = await req.json(); } catch { return NextResponse.json({ error: "JSON inválido" }, { status: 400 }); }
+    const { id, status } = body;
+    if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
     if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number]))
       return NextResponse.json({ error: "status inválido" }, { status: 400 });
     const { error } = await supabase.from("submissions").update({ status }).eq("id", id);
@@ -186,7 +203,10 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   return withAdminAuth(req, async () => {
-    const { id } = await req.json() as { id: string };
+    let body: { id?: string };
+    try { body = await req.json(); } catch { return NextResponse.json({ error: "JSON inválido" }, { status: 400 }); }
+    const { id } = body;
+    if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
     const { data: files } = await supabase.storage.from("solicitudes").list(id);
     if (files && files.length > 0) {
       await supabase.storage.from("solicitudes").remove(files.map((f) => `${id}/${f.name}`));

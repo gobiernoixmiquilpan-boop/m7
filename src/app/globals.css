@@ -57,3 +57,20 @@ body {
 .slide-up-2 { animation: slide-up 0.25s ease-out 0.15s both; }
 .slide-up-3 { animation: slide-up 0.25s ease-out 0.25s both; }
 .slide-up-4 { animation: slide-up 0.25s ease-out 0.35s both; }
+
+/* ── Etiquetas de lotes en el mapa ── */
+.lote-label {
+  background: rgba(255, 255, 255, 0.93) !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.14) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18) !important;
+  color: #111827 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  font-family: system-ui, sans-serif !important;
+  letter-spacing: 0.04em !important;
+  padding: 2px 7px !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
+}
+.lote-label::before { display: none !important; }

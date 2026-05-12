@@ -81,7 +81,7 @@ export default function ConsultaPage() {
               <input
                 type="text"
                 inputMode="text"
-                placeholder="CAP-2026-XXXX"
+                placeholder="CAP-2026-4A2B1C"
                 value={folio}
                 onChange={(e) => { setFolio(normalize(e.target.value)); setError(""); }}
                 className={`w-full border rounded-xl px-4 py-3 text-base font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent transition-all placeholder:text-gray-300 placeholder:font-sans placeholder:tracking-normal ${
