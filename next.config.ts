@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options",          value: "DENY" },
           { key: "Referrer-Policy",          value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy",       value: "camera=(self), microphone=(), geolocation=(self)" },
+          { key: "X-XSS-Protection",         value: "1; mode=block" },
         ],
       },
     ];

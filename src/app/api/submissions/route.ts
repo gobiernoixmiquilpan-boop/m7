@@ -29,15 +29,64 @@ function validatePost(fd: FormData): string | null {
   return null;
 }
 
+const VALID_SORT_KEYS = ["timestamp", "nombreCompleto", "comunidad", "status", "superficie", "tipoTierra"] as const;
+type SortKey = typeof VALID_SORT_KEYS[number];
+
 export async function GET(req: NextRequest) {
   return withAdminAuth(req, async () => {
-    const { data, error } = await supabase
-      .from("submissions")
-      .select("*")
-      .order("timestamp", { ascending: false });
+    const p          = req.nextUrl.searchParams;
+    const pageParam  = p.get("page");
+    const limit      = Math.min(100, Math.max(1, parseInt(p.get("limit") ?? "20") || 20));
+    const search     = p.get("search")?.trim() ?? "";
+    const comunidad  = p.get("comunidad") ?? "";
+    const status     = p.get("status") ?? "";
+    const period     = p.get("period") ?? "";
+    const rawSort    = p.get("sortKey") ?? "timestamp";
+    const sortKey: SortKey = (VALID_SORT_KEYS as readonly string[]).includes(rawSort)
+      ? rawSort as SortKey
+      : "timestamp";
+    const ascending  = p.get("sortDir") === "asc";
+
+    let query = supabase.from("submissions").select("*", { count: "exact" });
+
+    if (search) {
+      const safe = search.replace(/[%_]/g, "\\$&");
+      query = query.or(
+        `"nombreCompleto".ilike.%${safe}%,comunidad.ilike.%${safe}%,curp.ilike.%${safe}%,id.ilike.%${safe}%`
+      );
+    }
+    if (comunidad) query = query.eq("comunidad", comunidad);
+    if (status)    query = query.eq("status", status);
+    if (period) {
+      const now   = new Date();
+      if (period === "hoy") {
+        const s = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        const e = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+        query = query.gte("timestamp", s).lt("timestamp", e);
+      } else if (period === "semana") {
+        query = query.gte("timestamp", new Date(now.getTime() - 7 * 86_400_000).toISOString());
+      } else if (period === "mes") {
+        const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const e = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+        query = query.gte("timestamp", s).lt("timestamp", e);
+      }
+    }
+
+    query = query.order(sortKey, { ascending });
+
+    if (pageParam !== null) {
+      const page = Math.max(1, parseInt(pageParam) || 1);
+      query = query.range((page - 1) * limit, page * limit - 1);
+    }
+
+    const { data, error, count } = await query;
     if (error) {
       console.error("[GET /api/submissions] ERROR:", error.code, error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (pageParam !== null) {
+      return NextResponse.json({ data: data ?? [], total: count ?? 0 });
     }
     console.log(`[GET /api/submissions] OK — ${data?.length ?? 0} registros`);
     return NextResponse.json(data ?? []);
@@ -86,7 +135,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Guardar fotos en Storage (privado) — el path se guarda en la columna *Url
-  await Promise.all(
+  const uploadResults = await Promise.allSettled(
     ["fotoCasa", "fotoINEFrente", "fotoINEAtras"].map(async (field) => {
       const file = fd.get(field) as File | null;
       if (!file || file.size === 0) return;
@@ -98,10 +147,21 @@ export async function POST(req: NextRequest) {
           contentType: file.type,
           upsert: true,
         });
-      if (error) console.error(`[POST /api/submissions] storage upload ${field}:`, error.message);
-      else entry[`${field}Url`] = storagePath;
+      if (error) throw new Error(`${field}: ${error.message}`);
+      entry[`${field}Url`] = storagePath;
     })
   );
+
+  const failedUploads = uploadResults
+    .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+    .map((r) => (r.reason as Error).message);
+  if (failedUploads.length > 0) {
+    console.error("[POST /api/submissions] storage upload errors:", failedUploads.join("; "));
+    return NextResponse.json(
+      { error: "No se pudieron subir las fotografías. Intenta de nuevo." },
+      { status: 500 }
+    );
+  }
 
   const { error } = await supabase.from("submissions").upsert(entry, { onConflict: "id", ignoreDuplicates: true });
   if (error) {

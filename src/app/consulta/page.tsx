@@ -35,8 +35,8 @@ export default function ConsultaPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const clean = folio.trim().toUpperCase();
-    if (!/^CAP-2026-[0-9A-F]{4,6}$/.test(clean)) {
-      setError("Formato inválido. Ejemplo: CAP-2026-4A2B");
+    if (!/^CAP-2026-[0-9A-F]{6}$/.test(clean)) {
+      setError("Formato inválido. Ejemplo: CAP-2026-4A2B1C");
       return;
     }
     saveHistory(clean);

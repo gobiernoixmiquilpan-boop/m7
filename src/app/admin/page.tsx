@@ -481,8 +481,12 @@ export default function AdminPage() {
   const [sortKey,         setSortKey]         = useState<keyof Submission>("timestamp");
   const [sortDir,         setSortDir]         = useState<"asc" | "desc">("desc");
   const [filterPeriod,    setFilterPeriod]    = useState("");
-  const toastTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFetching  = useRef(false);
+  const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFetching     = useRef(false);
+  const [tableData,    setTableData]    = useState<Submission[]>([]);
+  const [tableTotal,   setTableTotal]   = useState(0);
+  const isFetchingPage = useRef(false);
+  const tableParamsRef = useRef({ page: 1, search: "", filterComunidad: "", filterStatus: "", filterPeriod: "", sortKey: "timestamp" as keyof Submission, sortDir: "desc" as "asc" | "desc" });
 
   function toggleSort(key: keyof Submission) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -539,6 +543,28 @@ export default function AdminPage() {
     }
   }, []);
 
+  const fetchPage = useCallback(async (
+    pg: number,
+    s: string, cc: string, cs: string, cp: string,
+    sk: keyof Submission, sd: "asc" | "desc"
+  ) => {
+    if (isFetchingPage.current) return;
+    isFetchingPage.current = true;
+    try {
+      const params = new URLSearchParams({ page: String(pg), limit: String(PAGE_SIZE), sortKey: sk as string, sortDir: sd });
+      if (s)  params.set("search",    s);
+      if (cc) params.set("comunidad", cc);
+      if (cs) params.set("status",    cs);
+      if (cp) params.set("period",    cp);
+      const res = await fetch(`/api/submissions?${params}`);
+      if (!res.ok) return;
+      const body = await res.json() as { data: Submission[]; total: number };
+      setTableData(body.data);
+      setTableTotal(body.total);
+    } catch { /* network */ }
+    finally { isFetchingPage.current = false; }
+  }, []);
+
   useEffect(() => {
     if (sessionStorage.getItem("admin-ok") === "1") {
       fetchData();
@@ -560,13 +586,39 @@ export default function AdminPage() {
       .finally(() => setCheckingAuth(false));
   }, [fetchData]);
 
+  // Mantiene una referencia actualizada de los parámetros de tabla
+  useEffect(() => {
+    tableParamsRef.current = { page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir };
+  }, [page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir]);
+
+  // Re-fetch de tabla cuando cambian filtros, orden o página
   useEffect(() => {
     if (!authed) return;
-    const id = setInterval(() => { if (!document.hidden) fetchData(); }, 5_000);
-    const onVisible = () => { if (!document.hidden) fetchData(); };
+    fetchPage(page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir);
+  }, [authed, page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, fetchPage]);
+
+  // Supabase Realtime vía SSE (reemplaza el polling de 5 s)
+  useEffect(() => {
+    if (!authed) return;
+    const es = new EventSource("/api/submissions/stream");
+    es.onmessage = () => {
+      if (document.hidden) return;
+      fetchData();
+      const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd } = tableParamsRef.current;
+      fetchPage(pg, s, cc, cs, cp, sk, sd);
+    };
+    const onVisible = () => {
+      if (document.hidden) return;
+      fetchData();
+      const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd } = tableParamsRef.current;
+      fetchPage(pg, s, cc, cs, cp, sk, sd);
+    };
     document.addEventListener("visibilitychange", onVisible);
-    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
-  }, [authed, fetchData]);
+    return () => {
+      es.close();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [authed, fetchData, fetchPage]);
 
   async function login() {
     if (loginLoading || loginBlocked) return;
@@ -616,6 +668,8 @@ export default function AdminPage() {
     if (!res.ok) { showToast("No se pudo eliminar. Intente de nuevo.", false); return; }
     showToast("Registro eliminado correctamente.");
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
+    setTableData((prev) => prev.filter((s) => s.id !== id));
+    setTableTotal((prev) => Math.max(0, prev - 1));
     if (selected?.id === id) setSelected(null);
   }
 
@@ -627,6 +681,7 @@ export default function AdminPage() {
     });
     if (!res.ok) { showToast("No se pudo actualizar el estado.", false); return; }
     setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
+    setTableData((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
     setSelected((prev) => prev?.id === id ? { ...prev, status } : prev);
   }
 
@@ -707,8 +762,7 @@ export default function AdminPage() {
       return sortDir === "asc" ? cmp : -cmp;
     });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(tableTotal / PAGE_SIZE));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -913,17 +967,17 @@ export default function AdminPage() {
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
                 </div>
                 <span className="text-xs text-gray-400 shrink-0">
-                  {filtered.length} registro{filtered.length !== 1 ? "s" : ""}
+                  {tableTotal} registro{tableTotal !== 1 ? "s" : ""}
                 </span>
               </div>
 
-              {loading && submissions.length === 0 ? (
+              {loading && tableData.length === 0 ? (
                 <div className="p-5 space-y-2.5">
                   {Array.from({ length: 7 }).map((_, i) => (
                     <div key={i} className="h-11 bg-gray-100 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.1 }} />
                   ))}
                 </div>
-              ) : paginated.length === 0 ? (
+              ) : tableData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                   <FileText className="w-10 h-10 mb-2 opacity-30" strokeWidth={1} />
                   <p className="text-sm">{search || filterComunidad ? "Sin resultados" : "Aún no hay registros"}</p>
@@ -957,7 +1011,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginated.map((s, i) => (
+                      {tableData.map((s, i) => (
                         <tr key={s.id} onClick={() => setSelected(s)}
                           className={`border-b border-gray-50 hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
                           <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>

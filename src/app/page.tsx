@@ -121,6 +121,8 @@ async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promi
   return new Promise((resolve) => {
     const img = new window.Image();
     const url = URL.createObjectURL(file);
+    const fallback = setTimeout(() => { URL.revokeObjectURL(url); resolve(file); }, 8000);
+    const done = (result: File) => { clearTimeout(fallback); resolve(result); };
     img.onload = () => {
       URL.revokeObjectURL(url);
       let { width, height } = img;
@@ -133,12 +135,12 @@ async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promi
       canvas.height = height;
       canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
       canvas.toBlob(
-        (blob) => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file),
+        (blob) => done(blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file),
         "image/jpeg",
         quality
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onerror = () => { URL.revokeObjectURL(url); done(file); };
     img.src = url;
   });
 }
@@ -456,7 +458,7 @@ export default function Home() {
           setGeoError("Tiempo de espera agotado. Escríbela manualmente.");
         }
       },
-      { timeout: 10000 }
+      { timeout: 25000, enableHighAccuracy: false }
     );
   }
 
