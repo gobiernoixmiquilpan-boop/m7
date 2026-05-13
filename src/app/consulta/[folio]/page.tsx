@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle, Clock, AlertCircle, XCircle, Search, ChevronLeft, Info } from "lucide-react";
+import { CheckCircle, Clock, XCircle, Search, ChevronLeft, Info } from "lucide-react";
+import ShareFolioButton from "@/components/ShareFolioButton";
 
 export async function generateMetadata({
   params,
@@ -165,6 +166,7 @@ export default async function ConsultaFolioPage({
               className="flex items-center justify-center gap-2 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all w-full">
               <Search className="w-4 h-4" strokeWidth={2} /> Consultar otro folio
             </Link>
+            <ShareFolioButton folio={folio} />
             <div className="text-center">
               <Link href="/"
                 className="inline-flex items-center gap-1 text-xs text-guinda-600 hover:text-guinda-800 font-medium">

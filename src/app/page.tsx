@@ -20,7 +20,7 @@ import {
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
   ChevronDown, CheckCircle, ImageIcon, Loader2, ShieldCheck,
   ChevronLeft, ExternalLink, Wifi, Search, FileText, Trash2,
-  X, Copy,
+  X, Copy, MessageCircle,
 } from "lucide-react";
 
 interface FormData {
@@ -225,6 +225,56 @@ export default function Home() {
     } catch { /* noop */ }
   }, [form]);
 
+  async function drainQueue() {
+    if (isDraining.current) return;
+    isDraining.current = true;
+    let queue: QueueItem[] = [];
+    try { queue = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]"); } catch { isDraining.current = false; return; }
+    if (queue.length === 0) { isDraining.current = false; return; }
+
+    const remaining: QueueItem[] = [];
+    for (const item of queue) {
+      try {
+        const fd = new FormData();
+        Object.entries(item.draft).forEach(([k, v]) => {
+          if (v !== null && v !== undefined) fd.append(k, String(v));
+        });
+        if (item.id) fd.append("id", item.id);
+        const fotoCasa      = await getPhoto(`${item.tempId}_fotoCasa`);
+        const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
+        const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
+        if (fotoCasa)      fd.append("fotoCasa",      fotoCasa);
+        if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
+        if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
+
+        const res = await fetch("/api/submissions", { method: "POST", body: fd });
+
+        // 4xx = terminal error (bad data, CURP duplicate, etc.) — drop item from queue
+        if (res.status >= 400 && res.status < 500) {
+          await deletePhoto(`${item.tempId}_fotoCasa`);
+          await deletePhoto(`${item.tempId}_fotoINEFrente`);
+          await deletePhoto(`${item.tempId}_fotoINEAtras`);
+          continue;
+        }
+        if (!res.ok) throw new Error("server_error");
+
+        await deletePhoto(`${item.tempId}_fotoCasa`);
+        await deletePhoto(`${item.tempId}_fotoINEFrente`);
+        await deletePhoto(`${item.tempId}_fotoINEAtras`);
+      } catch {
+        remaining.push(item);
+      }
+    }
+
+    if (remaining.length === 0) {
+      localStorage.removeItem(PENDING_KEY);
+    } else {
+      localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
+    }
+    setPendingCount(remaining.length);
+    isDraining.current = false;
+  }
+
   /* ── Connection monitoring & retry ── */
   useEffect(() => {
     const handleOnline = () => {
@@ -241,12 +291,13 @@ export default function Home() {
       window.removeEventListener("offline", handleOffline);
       if (retryTimer.current) clearTimeout(retryTimer.current);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Drain queue on mount if already online ── */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (navigator.onLine) drainQueue();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Advertencia al cerrar con datos sin enviar ── */
   useEffect(() => {
@@ -384,60 +435,10 @@ export default function Home() {
       await deletePhoto("fotoINEAtras");
       setSubmittedId(data.id);
       setSubmitted(true);
-      void drainQueue(); // envía en segundo plano cualquier otra solicitud en cola
+      void drainQueue();
     } finally {
       setLoading(false);
     }
-  }
-
-  async function drainQueue() {
-    if (isDraining.current) return;
-    isDraining.current = true;
-    let queue: QueueItem[] = [];
-    try { queue = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]"); } catch { isDraining.current = false; return; }
-    if (queue.length === 0) { isDraining.current = false; return; }
-
-    const remaining: QueueItem[] = [];
-    for (const item of queue) {
-      try {
-        const fd = new FormData();
-        Object.entries(item.draft).forEach(([k, v]) => {
-          if (v !== null && v !== undefined) fd.append(k, String(v));
-        });
-        if (item.id) fd.append("id", item.id);
-        const fotoCasa      = await getPhoto(`${item.tempId}_fotoCasa`);
-        const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
-        const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
-        if (fotoCasa)      fd.append("fotoCasa",      fotoCasa);
-        if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
-        if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
-
-        const res = await fetch("/api/submissions", { method: "POST", body: fd });
-
-        // 4xx = terminal error (bad data, CURP duplicate, etc.) — drop item from queue
-        if (res.status >= 400 && res.status < 500) {
-          await deletePhoto(`${item.tempId}_fotoCasa`);
-          await deletePhoto(`${item.tempId}_fotoINEFrente`);
-          await deletePhoto(`${item.tempId}_fotoINEAtras`);
-          continue;
-        }
-        if (!res.ok) throw new Error("server_error");
-
-        await deletePhoto(`${item.tempId}_fotoCasa`);
-        await deletePhoto(`${item.tempId}_fotoINEFrente`);
-        await deletePhoto(`${item.tempId}_fotoINEAtras`);
-      } catch {
-        remaining.push(item);
-      }
-    }
-
-    if (remaining.length === 0) {
-      localStorage.removeItem(PENDING_KEY);
-    } else {
-      localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
-    }
-    setPendingCount(remaining.length);
-    isDraining.current = false;
   }
 
   function discardDraft() {
@@ -536,6 +537,15 @@ export default function Home() {
               {copied ? "¡Copiado!" : "Copiar número de folio"}
             </button>
           )}
+          {offlineFolio && (
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`Mi folio provisional de regularización Capula 2026: ${offlineFolio} (pendiente de envío cuando haya conexión)`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 w-full flex items-center justify-center gap-2 border-2 border-emerald-200 hover:border-emerald-400 text-emerald-700 text-sm font-semibold py-3 rounded-2xl transition-all">
+              <MessageCircle className="w-4 h-4" strokeWidth={2} /> Guardar folio por WhatsApp
+            </a>
+          )}
           <div className="mt-3 flex items-start gap-2 bg-guinda-50 border border-guinda-100 rounded-xl px-4 py-3">
             <ShieldCheck className="w-4 h-4 text-guinda-600 shrink-0 mt-px" strokeWidth={2} />
             <p className="text-xs text-guinda-700 font-medium text-left">
@@ -592,6 +602,13 @@ export default function Home() {
             className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 text-sm font-semibold py-3 rounded-2xl transition-all">
             <Search className="w-4 h-4" strokeWidth={2} /> Ver estado de mi solicitud
           </Link>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`Mi folio de regularización de tierras Capula 2026: ${folioNum}\nConsulta el estado en: ${typeof window !== "undefined" ? window.location.origin : ""}/consulta/${folioNum}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-emerald-200 hover:border-emerald-400 text-emerald-700 text-sm font-semibold py-3 rounded-2xl transition-all">
+            <MessageCircle className="w-4 h-4" strokeWidth={2} /> Compartir por WhatsApp
+          </a>
           <button onClick={reset}
             className="mt-5 w-full bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white px-6 py-3.5 rounded-2xl font-semibold transition-all">
             Nueva solicitud
@@ -777,6 +794,7 @@ export default function Home() {
       )}
 
       {/* ── Contenido del paso ── */}
+      {/* eslint-disable-next-line react-hooks/refs */}
       <div key={step} className={`max-w-2xl mx-auto px-4 pt-5 space-y-4 ${stepDir.current === "back" ? "step-animate-back" : "step-animate"}`}>
 
         {/* PASO 1 · Foto de la casa */}
@@ -861,7 +879,8 @@ export default function Home() {
           <Card title="Nombre completo" hasError={!!errors.nombreCompleto}>
             <p className="text-xs text-gray-400 mb-3">Escríbelo tal como aparece en tu INE, empezando por apellidos.</p>
             <TextInput placeholder="Ej: García López María" value={form.nombreCompleto}
-              onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v }))} error={errors.nombreCompleto} />
+              onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v }))} error={errors.nombreCompleto}
+              autoCapitalize="words" autoCorrect="off" spellCheck={false} />
           </Card>
         )}
 
@@ -904,7 +923,7 @@ export default function Home() {
             <Card title="CURP" hasError={!!errors.curp}>
               <TextInput placeholder="Ej: GOML900101HDFMRR09" value={form.curp}
                 onChange={(v) => setForm((p) => ({ ...p, curp: v.toUpperCase().slice(0, 18) }))}
-                error={errors.curp} />
+                error={errors.curp} autoCapitalize="characters" autoCorrect="off" spellCheck={false} />
               <div className="mt-2.5 flex items-center gap-2">
                 <div className="flex-1 flex gap-0.5">
                   {Array.from({ length: 18 }).map((_, i) => (
@@ -1198,15 +1217,17 @@ function FieldError({ msg }: { msg: string }) {
   );
 }
 
-function TextInput({ placeholder, value, onChange, error, inputMode, suffix }: {
+function TextInput({ placeholder, value, onChange, error, inputMode, suffix, autoCapitalize, autoCorrect, spellCheck }: {
   placeholder: string; value: string; onChange: (v: string) => void;
   error?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]; suffix?: string;
+  autoCapitalize?: string; autoCorrect?: string; spellCheck?: boolean;
 }) {
   return (
     <>
       <div className="relative">
         <input type="text" inputMode={inputMode} placeholder={placeholder} value={value}
           onChange={(e) => onChange(e.target.value)}
+          autoCapitalize={autoCapitalize} autoCorrect={autoCorrect} spellCheck={spellCheck}
           className={`w-full border rounded-xl px-4 py-3 text-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent transition-all placeholder:text-gray-400 ${suffix ? "pr-12" : ""} ${error ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50/50 focus:bg-white"}`}
         />
         {suffix && (

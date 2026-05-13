@@ -10,7 +10,6 @@ function validatePost(fd: FormData): string | null {
   const ubicacion      = (fd.get("ubicacion")      as string | null)?.trim() ?? "";
   const celular        = (fd.get("celular")        as string | null) ?? "";
   const curp           = (fd.get("curp")           as string | null)?.trim() ?? "";
-  const predio         = (fd.get("predio")         as string | null)?.trim() ?? "";
   const lote           = (fd.get("lote")           as string | null)?.trim() ?? "";
   const tipoTierra     = (fd.get("tipoTierra")     as string | null) ?? "";
   const superficie     = (fd.get("superficie")     as string | null) ?? "";

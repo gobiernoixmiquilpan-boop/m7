@@ -13,7 +13,7 @@ import {
   Users, MapPin, Droplets, CloudRain, LogOut, Download,
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
   FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
-  ArrowUp, ArrowDown, ZoomIn,
+  ArrowUp, ArrowDown, ZoomIn, Check, Copy,
 } from "lucide-react";
 
 function Eye({ className }: { className?: string }) {
@@ -307,9 +307,11 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
   onStatusChange: (id: string, status: string) => Promise<void>;
   onDelete: (id: string) => void;
 }) {
-  const [status,   setStatus]   = useState(s.status ?? "pendiente");
-  const [saving,   setSaving]   = useState(false);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [status,     setStatus]     = useState(s.status ?? "pendiente");
+  const [saving,     setSaving]     = useState(false);
+  const [lightbox,   setLightbox]   = useState<string | null>(null);
+  const [copied,     setCopied]     = useState(false);
+  const [copiedCurp, setCopiedCurp] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -352,7 +354,19 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
           </button>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm leading-none truncate">{s.nombreCompleto}</p>
-            <p className="text-guinda-300 text-xs mt-0.5 font-mono">{folio(s.id)}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-guinda-300 text-xs font-mono">{folio(s.id)}</p>
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(folio(s.id)).catch(() => {});
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="text-guinda-300 hover:text-white transition-colors shrink-0"
+                title="Copiar folio">
+                {copied ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <Copy className="w-3 h-3" strokeWidth={2} />}
+              </button>
+            </div>
           </div>
           {saving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />}
         </div>
@@ -415,7 +429,22 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
 
           {/* Datos personales */}
           <InfoSection title="Datos personales">
-            <InfoRow label="CURP" value={s.curp} mono />
+            <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
+              <span className="text-xs text-gray-400 font-medium shrink-0">CURP</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-700 font-mono break-all text-right">{s.curp}</span>
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(s.curp).catch(() => {});
+                    setCopiedCurp(true);
+                    setTimeout(() => setCopiedCurp(false), 2000);
+                  }}
+                  className="text-gray-300 hover:text-guinda-600 transition-colors shrink-0"
+                  title="Copiar CURP">
+                  {copiedCurp ? <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={2} />}
+                </button>
+              </div>
+            </div>
             <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
               <span className="text-xs text-gray-400 font-medium">Celular</span>
               <div className="flex items-center gap-2">
@@ -455,6 +484,7 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
               className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
               <X className="w-5 h-5 text-white" strokeWidth={2} />
             </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={lightbox} alt="Fotografía" className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()} />
             <p className="text-white/40 text-xs">Toca fuera de la imagen o presiona ESC para cerrar</p>
           </div>
@@ -495,6 +525,13 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
+function getPageNumbers(current: number, total: number): (number | null)[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, null, total];
+  if (current >= total - 3) return [1, null, total - 4, total - 3, total - 2, total - 1, total];
+  return [1, null, current - 1, current, current + 1, null, total];
+}
+
 /* ──────────────────── Admin principal ──────────────────── */
 export default function AdminPage() {
   useEffect(() => { document.title = "Panel Administrativo · Capula 2026"; }, []);
@@ -529,6 +566,32 @@ export default function AdminPage() {
   const [tableTotal,   setTableTotal]   = useState(0);
   const isFetchingPage = useRef(false);
   const tableParamsRef = useRef({ page: 1, search: "", filterComunidad: "", filterStatus: "", filterPeriod: "", sortKey: "timestamp" as keyof Submission, sortDir: "desc" as "asc" | "desc" });
+  const tableRef       = useRef<HTMLDivElement>(null);
+  const skipPageScroll = useRef(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [draftSearch,  setDraftSearch]  = useState("");
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleSearch(v: string) {
+    setDraftSearch(v);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setSearch(v);
+      setPage(1);
+      skipPageScroll.current = true;
+    }, 350);
+  }
+
+  function clearFilters() {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    setDraftSearch("");
+    setSearch("");
+    setFilterComunidad("");
+    setFilterStatus("");
+    setFilterPeriod("");
+    setPage(1);
+    skipPageScroll.current = true;
+  }
 
   function toggleSort(key: keyof Submission) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -610,6 +673,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (sessionStorage.getItem("admin-ok") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData();
       return () => { isFetching.current = false; };
     }
@@ -637,6 +701,7 @@ export default function AdminPage() {
   // Re-fetch de tabla cuando cambian filtros, orden o página
   useEffect(() => {
     if (!authed) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPage(page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir);
   }, [authed, page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, fetchPage]);
 
@@ -677,6 +742,25 @@ export default function AdminPage() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [authed, fetchData, fetchPage]);
+
+  useEffect(() => {
+    if (skipPageScroll.current) { skipPageScroll.current = false; return; }
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [page]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "/") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+      e.preventDefault();
+      setMountedTabs(prev => new Set([...prev, "tabla"]));
+      setActiveTab("tabla");
+      searchInputRef.current?.focus();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   async function login() {
     if (loginLoading || loginBlocked) return;
@@ -765,16 +849,8 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (checkingAuth) {
-    return (
-      <main className="min-h-screen bg-guinda-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-guinda-600 animate-spin" strokeWidth={1.5} />
-      </main>
-    );
-  }
-  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} remaining={loginRemaining} blocked={loginBlocked} />;
-
-  /* ── Filter (memoizado para no recalcular en cada render) ── */
+  /* ── Filter ── */
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const filtered = useMemo(() => {
     const _now = new Date();
     return [...submissions]
@@ -810,12 +886,13 @@ export default function AdminPage() {
   const riego    = filtered.filter((s) => s.tipoTierra === "riego").length;
   const temporal = filtered.filter((s) => s.tipoTierra === "temporal").length;
   const dialecto = filtered.filter((s) => s.hablaDialecto === "si").length;
-  const avgSup   = total
-    ? (filtered.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0) / total).toFixed(2)
-    : "0";
+  const totalSupRaw = filtered.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+  const totalSup = totalSupRaw.toFixed(1);
+  const avgSup   = total ? (totalSupRaw / total).toFixed(2) : "0";
 
   const byComunidad = COMUNIDADES.map((c) => ({
     name: c === "La Estancia" ? "Estancia" : c,
+    comunidad: c,
     solicitudes: submissions.filter((s) => s.comunidad === c).length,
   })).filter((d) => d.solicitudes > 0);
 
@@ -829,6 +906,15 @@ export default function AdminPage() {
   const pieDialecto = [{ name: "Habla", value: dialecto }, { name: "No habla", value: total - dialecto }];
 
   const totalPages = Math.max(1, Math.ceil(tableTotal / PAGE_SIZE));
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-guinda-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-guinda-600 animate-spin" strokeWidth={1.5} />
+      </main>
+    );
+  }
+  if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} remaining={loginRemaining} blocked={loginBlocked} />;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -888,7 +974,8 @@ export default function AdminPage() {
             icon={<MapPin className="w-5 h-5" strokeWidth={1.5} />} color="blue" />
           <StatCard label="Tierra de riego" value={riego}
             icon={<Droplets className="w-5 h-5" strokeWidth={1.5} />} />
-          <StatCard label="Sup. promedio" value={`${avgSup} ha`}
+          <StatCard label="Superficie total" value={`${totalSup} ha`}
+            sub={`Promedio ${avgSup} ha`}
             icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
         </div>
 
@@ -900,10 +987,13 @@ export default function AdminPage() {
                 (s) => (s.status ?? "pendiente") === o.value
               ).length;
               return (
-                <div key={o.value} className={`rounded-2xl px-4 py-3 border border-black/5 ${o.cls}`}>
+                <button key={o.value}
+                  onClick={() => { setFilterStatus(filterStatus === o.value ? "" : o.value); changeTab("tabla"); setPage(1); skipPageScroll.current = true; }}
+                  title={filterStatus === o.value ? `Quitar filtro: ${o.label}` : `Filtrar por: ${o.label}`}
+                  className={`rounded-2xl px-4 py-3 border border-black/5 text-left transition-all hover:opacity-85 active:scale-[.98] ${o.cls} ${filterStatus === o.value ? "ring-2 ring-offset-1 ring-current" : ""}`}>
                   <p className="text-2xl font-bold">{count}</p>
                   <p className="text-xs font-semibold opacity-70 mt-0.5">{o.label}</p>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -953,15 +1043,35 @@ export default function AdminPage() {
           <div className={activeTab !== "graficas" ? "hidden" : ""}>
             <div className="space-y-4">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <h2 className="font-bold text-gray-800 mb-4">Solicitudes por comunidad</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-gray-800">Solicitudes por comunidad</h2>
+                  <span className="text-[10px] text-gray-400">Toca una barra para filtrar</span>
+                </div>
                 {byComunidad.length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={byComunidad} barSize={36}>
+                    <BarChart
+                      data={byComunidad}
+                      barSize={36}
+                      style={{ cursor: "pointer" }}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      onClick={(chartData: any) => {
+                        const payload = chartData?.activePayload?.[0]?.payload as { comunidad?: string } | undefined;
+                        if (!payload?.comunidad) return;
+                        setFilterComunidad(filterComunidad === payload.comunidad ? "" : payload.comunidad);
+                        changeTab("tabla");
+                        setPage(1);
+                        skipPageScroll.current = true;
+                      }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #f3f4f6", fontSize: 12 }} cursor={{ fill: "#fdf1f4" }} />
-                      <Bar dataKey="solicitudes" fill={G} radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="solicitudes" radius={[6, 6, 0, 0]}>
+                        {byComunidad.map((entry, idx) => (
+                          <Cell key={idx} fill={filterComunidad === entry.comunidad ? G2 : G} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : <p className="text-gray-400 text-sm text-center py-10">Sin datos aún</p>}
@@ -1012,15 +1122,16 @@ export default function AdminPage() {
         {/* TABLA */}
         {mountedTabs.has("tabla") && (
           <div className={activeTab !== "tabla" ? "hidden" : ""}>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div ref={tableRef} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
               {/* Filtros */}
               <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-100">
                 <div className="relative flex-1 min-w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
-                  <input type="text" placeholder="Buscar por nombre, CURP o folio…"
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  <input ref={searchInputRef} type="text" placeholder="Buscar por nombre, CURP o folio… ( / )"
+                    value={draftSearch}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") { handleSearch(""); e.currentTarget.blur(); } }}
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
                   />
                 </div>
@@ -1053,6 +1164,13 @@ export default function AdminPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
                 </div>
+                {(draftSearch || filterComunidad || filterStatus || filterPeriod) && (
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-guinda-600 hover:text-guinda-800 bg-guinda-50 hover:bg-guinda-100 border border-guinda-200 hover:border-guinda-300 px-3 py-2.5 rounded-xl transition-all shrink-0">
+                    <X className="w-3.5 h-3.5" strokeWidth={2} /> Limpiar
+                  </button>
+                )}
                 <span className="text-xs text-gray-400 shrink-0">
                   {tableTotal} registro{tableTotal !== 1 ? "s" : ""}
                 </span>
@@ -1067,7 +1185,7 @@ export default function AdminPage() {
               ) : tableData.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                   <FileText className="w-10 h-10 mb-2 opacity-30" strokeWidth={1} />
-                  <p className="text-sm">{search || filterComunidad ? "Sin resultados" : "Aún no hay registros"}</p>
+                  <p className="text-sm">{search || filterComunidad || filterStatus || filterPeriod ? "Sin resultados para los filtros activos" : "Aún no hay registros"}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1099,9 +1217,12 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {tableData.map((s, i) => (
+                      {tableData.map((s, i) => {
+                        const isToday = new Date(s.timestamp).toDateString() === new Date().toDateString();
+                        const leftBorder = ({ pendiente: "border-l-gray-200", revision: "border-l-yellow-400", aprobado: "border-l-emerald-400", rechazado: "border-l-red-400" } as Record<string, string>)[s.status ?? "pendiente"] ?? "border-l-gray-200";
+                        return (
                         <tr key={s.id} onClick={() => setSelected(s)}
-                          className={`border-b border-gray-50 hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
+                          className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
                           <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>
                           <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{s.nombreCompleto}</td>
                           <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{s.comunidad}</td>
@@ -1117,11 +1238,17 @@ export default function AdminPage() {
                               {statusLabel(s.status)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">
-                            {new Date(s.timestamp).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" })}
+                          <td className="px-4 py-3 whitespace-nowrap text-xs">
+                            <span className="flex items-center gap-1.5">
+                              {isToday && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Registrado hoy" />}
+                              <span className={isToday ? "text-emerald-600 font-medium" : "text-gray-400"}>
+                                {new Date(s.timestamp).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" })}
+                              </span>
+                            </span>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1129,15 +1256,26 @@ export default function AdminPage() {
 
               {/* Paginación */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
+                <div className="flex items-center justify-center gap-1 px-5 py-3 border-t border-gray-100 flex-wrap">
                   <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                    className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-guinda-700 disabled:opacity-30 disabled:cursor-not-allowed">
-                    <ChevronLeft className="w-4 h-4" strokeWidth={2} /> Anterior
+                    className="p-2 rounded-xl text-gray-500 hover:text-guinda-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                    <ChevronLeft className="w-4 h-4" strokeWidth={2} />
                   </button>
-                  <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
+                  {getPageNumbers(page, totalPages).map((p, i) =>
+                    p === null ? (
+                      <span key={`e${i}`} className="text-xs text-gray-300 w-6 text-center select-none">…</span>
+                    ) : (
+                      <button key={p} onClick={() => setPage(p)}
+                        className={`w-8 h-8 text-xs font-semibold rounded-xl transition-all ${
+                          p === page ? "bg-guinda-700 text-white shadow-sm" : "text-gray-500 hover:text-guinda-700 hover:bg-gray-100"
+                        }`}>
+                        {p}
+                      </button>
+                    )
+                  )}
                   <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-guinda-700 disabled:opacity-30 disabled:cursor-not-allowed">
-                    Siguiente <ChevronRight className="w-4 h-4" strokeWidth={2} />
+                    className="p-2 rounded-xl text-gray-500 hover:text-guinda-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                    <ChevronRight className="w-4 h-4" strokeWidth={2} />
                   </button>
                 </div>
               )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { timingSafeEqual, createHash } from "crypto";
+import { registerToken } from "@/lib/auth";
 
 const COOKIE_BASE = {
   httpOnly: true,
@@ -43,6 +44,24 @@ function clearFailures(ip: string) {
   attempts.delete(ip);
 }
 
+function safeEquals(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a);
+    const bb = Buffer.from(b);
+    if (ba.length !== bb.length) {
+      timingSafeEqual(ba, ba); // consume time to prevent timing leaks
+      return false;
+    }
+    return timingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
+}
+
+function hashPassword(password: string): string {
+  return createHash("sha256").update(password + (process.env.AUTH_SALT ?? "capula2026")).digest("hex");
+}
+
 export async function POST(req: NextRequest) {
   const ip = getIp(req);
 
@@ -57,8 +76,14 @@ export async function POST(req: NextRequest) {
   const { email, password } = await req.json() as { email: string; password: string };
   if (!email || !password) return NextResponse.json({ ok: false }, { status: 400 });
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error || !data.session) {
+  const ADMIN_EMAIL    = process.env.ADMIN_EMAIL ?? "";
+  const ADMIN_PW_HASH  = process.env.ADMIN_PASSWORD_HASH ?? "";
+
+  const emailMatch = safeEquals(email.toLowerCase().trim(), ADMIN_EMAIL.toLowerCase().trim());
+  const pwHash     = hashPassword(password);
+  const pwMatch    = ADMIN_PW_HASH ? safeEquals(pwHash, ADMIN_PW_HASH) : false;
+
+  if (!emailMatch || !pwMatch) {
     recordFailure(ip);
     const entry = attempts.get(ip);
     const remaining = MAX_ATTEMPTS - (entry?.count ?? 0);
@@ -70,12 +95,11 @@ export async function POST(req: NextRequest) {
   }
 
   clearFailures(ip);
+  const token = createHash("sha256").update(`${email}:${Date.now()}:${process.env.AUTH_SALT ?? "capula2026"}`).digest("hex");
+  registerToken(token);
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("admin_token", data.session.access_token, {
+  res.cookies.set("admin_token", token, {
     ...COOKIE_BASE, maxAge: 60 * 60 * 8,
-  });
-  res.cookies.set("admin_refresh", data.session.refresh_token, {
-    ...COOKIE_BASE, maxAge: 60 * 60 * 24 * 7,
   });
   return res;
 }
@@ -83,6 +107,5 @@ export async function POST(req: NextRequest) {
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.delete("admin_token");
-  res.cookies.delete("admin_refresh");
   return res;
 }

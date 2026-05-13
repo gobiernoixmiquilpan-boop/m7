@@ -8,8 +8,13 @@ import { Search, ChevronLeft, AlertCircle, Clock, X } from "lucide-react";
 
 const HISTORY_KEY = "capula-folio-history";
 
-function normalize(v: string) {
-  return v.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 15);
+function normalize(v: string): string {
+  const upper = v.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  // If user types only hex digits (≥2 chars, no "C" prefix), auto-prepend "CAP-2026-"
+  if (!upper.startsWith("C") && upper.length >= 2 && /^[A-F0-9]+$/.test(upper)) {
+    return `CAP-2026-${upper.slice(0, 6)}`;
+  }
+  return upper.slice(0, 15);
 }
 
 function saveHistory(folio: string) {
@@ -28,6 +33,7 @@ export default function ConsultaPage() {
 
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHistory(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]"));
     } catch { /* noop */ }
   }, []);
