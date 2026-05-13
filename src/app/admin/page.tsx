@@ -285,26 +285,27 @@ function LoteCard({ lote, items, onSelect }: {
 
       {open && (
         <div className="border-t border-gray-100">
-          {items.map((s) => (
-            <button key={s.id} onClick={() => onSelect(s)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-guinda-50/40 border-b border-gray-50 last:border-0 transition-colors text-left">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${
-                s.status === "aprobado"  ? "bg-emerald-400" :
-                s.status === "rechazado" ? "bg-red-400" :
-                s.status === "revision"  ? "bg-yellow-400" : "bg-gray-300"
-              }`} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{s.nombreCompleto}</p>
-                <p className="text-xs text-gray-400">{s.comunidad} · {s.superficie} ha · {s.tipoTierra === "riego" ? "Riego" : "Temporal"}</p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
-                  {statusLabel(s.status)}
-                </span>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
-              </div>
-            </button>
-          ))}
+          {items.map((s) => {
+            const av = avatarCls(s.nombreCompleto);
+            return (
+              <button key={s.id} onClick={() => onSelect(s)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-guinda-50/40 border-b border-gray-50 last:border-0 transition-colors text-left">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 select-none ${av.bg} ${av.text}`}>
+                  {initials(s.nombreCompleto)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{s.nombreCompleto}</p>
+                  <p className="text-xs text-gray-400">{s.comunidad} · {s.superficie} ha · {s.tipoTierra === "riego" ? "Riego" : "Temporal"}</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
+                    {statusLabel(s.status)}
+                  </span>
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -319,6 +320,11 @@ function LotesView({ submissions, onSelect }: { submissions: Submission[]; onSel
   const conItems = porLote.filter((x) => x.items.length > 0);
   const sinItems = porLote.filter((x) => x.items.length === 0);
   const sinLote  = submissions.filter((s) => !s.lote || !LOTES.find((l) => l.loteNum === s.lote));
+  const totalSup = submissions.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+  const statusTotals = STATUS_OPTIONS.map((o) => ({
+    ...o,
+    n: submissions.filter((s) => (s.status ?? "pendiente") === o.value).length,
+  })).filter((x) => x.n > 0);
 
   if (submissions.length === 0) {
     return (
@@ -331,6 +337,27 @@ function LotesView({ submissions, onSelect }: { submissions: Submission[]; onSel
 
   return (
     <div className="space-y-3">
+      {/* Resumen global */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-black text-gray-800">{submissions.length}</span>
+          <span className="text-xs font-medium text-gray-400">solicitudes</span>
+        </div>
+        <div className="w-px h-6 bg-gray-100 shrink-0" />
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-black text-gray-800">{totalSup.toFixed(1)}</span>
+          <span className="text-xs font-medium text-gray-400">hectáreas</span>
+        </div>
+        {statusTotals.length > 0 && <div className="w-px h-6 bg-gray-100 shrink-0 hidden sm:block" />}
+        <div className="flex flex-wrap gap-1.5">
+          {statusTotals.map(({ value, label, cls, n }) => (
+            <span key={value} className={`text-xs font-semibold px-2.5 py-1 rounded-full ${cls}`}>
+              {label}: {n}
+            </span>
+          ))}
+        </div>
+      </div>
+
       {conItems.map(({ lote, items }) => (
         <LoteCard key={lote.id} lote={lote} items={items} onSelect={onSelect} />
       ))}
@@ -366,7 +393,7 @@ function StatCard({ label, value, sub, icon, color = "guinda" }: {
   const text   = color === "blue" ? "text-blue-700"  : color === "emerald" ? "text-emerald-700"  : "text-guinda-700";
   const accent = color === "blue" ? "#3b82f6"        : color === "emerald" ? "#10b981"           : "#6e112c";
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100 border-l-4"
+    <div className="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100 border-l-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-default"
       style={{ borderLeftColor: accent }}>
       <div className={`w-12 h-12 rounded-2xl ${bg} ${text} flex items-center justify-center shrink-0`}>
         {icon}
@@ -689,6 +716,16 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
 
 function initials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0] ?? "").join("").toUpperCase();
+}
+const AVATAR_PALETTES = [
+  { bg: "bg-guinda-100", text: "text-guinda-700" },
+  { bg: "bg-blue-100",   text: "text-blue-700"   },
+  { bg: "bg-emerald-100",text: "text-emerald-700" },
+  { bg: "bg-amber-100",  text: "text-amber-700"  },
+  { bg: "bg-violet-100", text: "text-violet-700" },
+] as const;
+function avatarCls(name: string) {
+  return AVATAR_PALETTES[(name.charCodeAt(0) ?? 0) % AVATAR_PALETTES.length];
 }
 
 function getPageNumbers(current: number, total: number): (number | null)[] {
@@ -1047,6 +1084,7 @@ export default function AdminPage() {
   }, [submissions, filterComunidad, filterStatus, filterPeriod, search, sortKey, sortDir]);
 
   /* ── Stats (usando filtered para reflejar filtros activos) ── */
+  const conItemsCount = LOTES.filter((l) => l.loteNum && submissions.some((s) => s.lote === l.loteNum)).length;
   const total    = filtered.length;
   const withGps  = filtered.filter((s) => s.lat && s.lng);
   const riego    = filtered.filter((s) => s.tipoTierra === "riego").length;
@@ -1171,26 +1209,41 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5">
-          {([
-            { id: "mapa",    label: "Mapa",      Icon: MapPin    },
-            { id: "lotes",   label: "Por lote",  Icon: Layers    },
-            { id: "graficas",label: "Gráficas",  Icon: BarChart2 },
-            { id: "tabla",   label: "Registros", Icon: FileText  },
-          ] as const).map(({ id, label, Icon }) => {
-            const active = activeTab === id;
-            return (
-              <button key={id} onClick={() => changeTab(id)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                  active ? "bg-guinda-700 text-white shadow-sm" : "text-gray-500 hover:text-guinda-700 hover:bg-guinda-50"
-                }`}>
-                <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
-                <span className="hidden sm:inline">{label}</span>
-                <span className="sm:hidden">{label.split(" ")[0]}</span>
-              </button>
-            );
-          })}
-        </div>
+        {(() => {
+          const tabBadges: Partial<Record<string, number>> = {
+            mapa:   withGps.length  > 0 ? withGps.length  : undefined,
+            tabla:  tableTotal      > 0 ? tableTotal       : undefined,
+            lotes:  conItemsCount   > 0 ? conItemsCount    : undefined,
+          };
+          return (
+            <div className="flex gap-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5">
+              {([
+                { id: "mapa",    label: "Mapa",      Icon: MapPin    },
+                { id: "lotes",   label: "Por lote",  Icon: Layers    },
+                { id: "graficas",label: "Gráficas",  Icon: BarChart2 },
+                { id: "tabla",   label: "Registros", Icon: FileText  },
+              ] as const).map(({ id, label, Icon }) => {
+                const active = activeTab === id;
+                const badge  = tabBadges[id];
+                return (
+                  <button key={id} onClick={() => changeTab(id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      active ? "bg-guinda-700 text-white shadow-sm" : "text-gray-500 hover:text-guinda-700 hover:bg-guinda-50"
+                    }`}>
+                    <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sm:hidden">{label.split(" ")[0]}</span>
+                    {badge !== undefined && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none tabular-nums ${active ? "bg-white/20 text-white" : "bg-gray-200 text-gray-500"}`}>
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* MAPA */}
         {mountedTabs.has("mapa") && (
@@ -1408,13 +1461,14 @@ export default function AdminPage() {
                       {tableData.map((s, i) => {
                         const isToday = new Date(s.timestamp).toDateString() === new Date().toDateString();
                         const leftBorder = ({ pendiente: "border-l-gray-200", revision: "border-l-yellow-400", aprobado: "border-l-emerald-400", rechazado: "border-l-red-400" } as Record<string, string>)[s.status ?? "pendiente"] ?? "border-l-gray-200";
+                        const av = avatarCls(s.nombreCompleto);
                         return (
                         <tr key={s.id} onClick={() => setSelected(s)}
                           className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
                           <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-full bg-guinda-100 text-guinda-700 flex items-center justify-center text-[10px] font-black shrink-0 select-none">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 select-none ${av.bg} ${av.text}`}>
                                 {initials(s.nombreCompleto)}
                               </div>
                               <span className="font-medium text-gray-800">{s.nombreCompleto}</span>
