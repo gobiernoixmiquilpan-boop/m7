@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual, createHash } from "crypto";
-import { registerToken } from "@/lib/auth";
+import { createToken } from "@/lib/auth";
 
 const COOKIE_BASE = {
   httpOnly: true,
@@ -95,8 +95,7 @@ export async function POST(req: NextRequest) {
   }
 
   clearFailures(ip);
-  const token = createHash("sha256").update(`${email}:${Date.now()}:${process.env.AUTH_SALT ?? "capula2026"}`).digest("hex");
-  registerToken(token);
+  const token = createToken(email);
   const res = NextResponse.json({ ok: true });
   res.cookies.set("admin_token", token, {
     ...COOKIE_BASE, maxAge: 60 * 60 * 8,
