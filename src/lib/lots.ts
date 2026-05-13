@@ -154,11 +154,11 @@ export const LOTES: Lote[] = [
   },
   {
     id: "san-pedro-capula",
-    nombre: "San Pedro Capula (exterior)",
+    nombre: "San Pedro Capula",
     color: "#5b21b6",
     fillColor: "#a855f7",
-    loteNum: "",
-    predioNum: "",
+    loteNum: "SPC-1",
+    predioNum: "SPC",
     centroid: [20.5328, -99.1564],
     coords: [
       [20.535035, -99.154805],

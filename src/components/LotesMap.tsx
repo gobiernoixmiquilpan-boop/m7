@@ -1,6 +1,7 @@
 "use client";
 
-import { MapContainer, TileLayer, Polygon, Popup, Marker, LayersControl } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Polygon, Popup, Marker, LayersControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { LOTES } from "@/lib/lots";
@@ -8,13 +9,17 @@ import { LOTES } from "@/lib/lots";
 function makeUserIcon() {
   return L.divIcon({
     className: "",
-    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-      <circle cx="16" cy="16" r="12" fill="#6e112c" stroke="white" stroke-width="3"/>
-      <circle cx="16" cy="16" r="5" fill="white"/>
+    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+      <circle cx="20" cy="20" r="16" fill="#6e112c" stroke="white" stroke-width="3" opacity="0.9"/>
+      <circle cx="20" cy="20" r="7" fill="white"/>
+      <circle cx="20" cy="20" r="16" fill="none" stroke="#6e112c" stroke-width="2" opacity="0.3">
+        <animate attributeName="r" from="16" to="26" dur="1.6s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" from="0.4" to="0" dur="1.6s" repeatCount="indefinite"/>
+      </circle>
     </svg>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18],
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -22],
   });
 }
 
@@ -22,10 +27,40 @@ function makeLabelIcon(text: string, color: string) {
   const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return L.divIcon({
     className: "",
-    html: `<div style="transform:translate(-50%,-50%);background:white;border:2px solid ${color};border-radius:5px;padding:2px 7px;font-size:10px;font-weight:800;color:${color};white-space:nowrap;box-shadow:0 1px 5px rgba(0,0,0,0.22);pointer-events:none;font-family:system-ui,sans-serif;">${escaped}</div>`,
+    html: `<div style="transform:translate(-50%,-50%);background:white;border:2px solid ${color};border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;color:${color};white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.18);pointer-events:none;font-family:system-ui,sans-serif;letter-spacing:0.02em;">${escaped}</div>`,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   });
+}
+
+/* ── Controlador dinámico del mapa ── */
+function MapController({ lat, lng, selectedLote }: { lat?: number | null; lng?: number | null; selectedLote?: string }) {
+  const map = useMap();
+
+  // Encuadre inicial a todos los lotes
+  useEffect(() => {
+    const coords = LOTES.flatMap((l) => l.coords);
+    if (coords.length > 0) {
+      map.fitBounds(coords as L.LatLngBoundsExpression, { padding: [28, 28], maxZoom: 14, animate: false });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Volar a GPS cuando llega
+  useEffect(() => {
+    if (lat && lng) map.flyTo([lat, lng], 16, { duration: 1.1 });
+  }, [lat, lng, map]);
+
+  // Volar al lote seleccionado
+  useEffect(() => {
+    if (!selectedLote) return;
+    const lote = LOTES.find((l) => l.loteNum === selectedLote);
+    if (!lote || !lote.coords.length) return;
+    const bounds = L.polygon(lote.coords as L.LatLngTuple[]).getBounds();
+    map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 17, duration: 0.9 });
+  }, [selectedLote, map]);
+
+  return null;
 }
 
 interface Props {
@@ -36,19 +71,37 @@ interface Props {
   height?: number;
 }
 
-export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height = 320 }: Props) {
-  const center: [number, number] = lat && lng ? [lat, lng] : [20.500, -99.116];
+export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height = 340 }: Props) {
+  const center: [number, number] = [20.510, -99.126];
   const userIcon = makeUserIcon();
   const selectedLoteObj = LOTES.find((l) => l.loteNum === selectedLote && l.loteNum !== "");
 
   return (
     <div>
+      {/* Instrucción cuando no hay lote seleccionado */}
+      {!selectedLote && (
+        <div style={{
+          marginBottom: 8, padding: "7px 12px",
+          background: "#fffbeb", border: "1.5px solid #fbbf24",
+          borderRadius: 10, fontSize: 12, color: "#92400e", fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 7,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Toca un lote en el mapa o selecciónalo en la leyenda
+        </div>
+      )}
+
       <MapContainer
         center={center}
         zoom={13}
         style={{ height, width: "100%", borderRadius: 12 }}
         scrollWheelZoom={false}
+        zoomControl
       >
+        <MapController lat={lat} lng={lng} selectedLote={selectedLote} />
+
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="Mapa">
             <TileLayer
@@ -74,25 +127,24 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
               pathOptions={{
                 color: lote.color,
                 fillColor: lote.fillColor,
-                fillOpacity: isSelected ? 0.55 : 0.22,
+                fillOpacity: isSelected ? 0.6 : 0.25,
                 weight: isSelected ? 4 : 2,
+                dashArray: lote.loteNum ? undefined : "6 4",
               }}
               eventHandlers={{
                 mouseover: (e) => {
-                  if (!isSelected) e.target.setStyle({ fillOpacity: 0.42, weight: 3 });
+                  if (!isSelected) e.target.setStyle({ fillOpacity: 0.45, weight: 3 });
                 },
                 mouseout: (e) => {
-                  if (!isSelected) e.target.setStyle({ fillOpacity: 0.22, weight: 2 });
+                  if (!isSelected) e.target.setStyle({ fillOpacity: 0.25, weight: 2 });
                 },
                 click: () => {
-                  if (lote.loteNum && onSelectLote) {
-                    onSelectLote(lote.loteNum, lote.predioNum);
-                  }
+                  if (lote.loteNum && onSelectLote) onSelectLote(lote.loteNum, lote.predioNum);
                 },
               }}
             >
               <Popup>
-                <div style={{ minWidth: 170 }}>
+                <div style={{ minWidth: 175 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <div style={{
                       width: 14, height: 14, borderRadius: 4, flexShrink: 0,
@@ -131,7 +183,7 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
                   )}
 
                   {!lote.loteNum && (
-                    <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>Perímetro exterior de referencia</p>
+                    <p style={{ fontSize: 11, color: "#6b7280", margin: 0 }}>Perímetro de referencia</p>
                   )}
                 </div>
               </Popup>
@@ -139,7 +191,7 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
           );
         })}
 
-        {/* Etiquetas de nombre centradas en cada polígono */}
+        {/* Etiquetas centradas */}
         {LOTES.filter((l) => l.loteNum).map((lote) => (
           <Marker
             key={`label-${lote.id}`}
@@ -164,12 +216,10 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
       {/* Banner de selección activa */}
       {selectedLoteObj && (
         <div style={{
-          margin: "8px 0 4px",
-          padding: "8px 14px",
+          margin: "8px 0 4px", padding: "8px 14px",
           background: `${selectedLoteObj.fillColor}18`,
           border: `1.5px solid ${selectedLoteObj.color}`,
-          borderRadius: 10,
-          display: "flex", alignItems: "center", gap: 10,
+          borderRadius: 10, display: "flex", alignItems: "center", gap: 10,
         }}>
           <div style={{
             width: 12, height: 12, borderRadius: 3, flexShrink: 0,
@@ -178,25 +228,20 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
           <div style={{ flex: 1, minWidth: 0 }}>
             <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Seleccionado: </span>
             <span style={{ fontSize: 12, color: "#111827", fontWeight: 700 }}>
-              Predio {selectedLoteObj.predioNum} · Lote {selectedLoteObj.loteNum}
+              {selectedLoteObj.nombre} · Predio {selectedLoteObj.predioNum} · Lote {selectedLoteObj.loteNum}
             </span>
           </div>
           {onSelectLote && (
             <button
               onClick={() => onSelectLote("", "")}
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                fontSize: 16, color: "#9ca3af", padding: 2, lineHeight: 1, flexShrink: 0,
-              }}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9ca3af", padding: 2, lineHeight: 1, flexShrink: 0 }}
               title="Limpiar selección"
-            >
-              ✕
-            </button>
+            >✕</button>
           )}
         </div>
       )}
 
-      {/* Leyenda de lotes */}
+      {/* Leyenda */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: selectedLoteObj ? "4px 0 2px" : "8px 0 2px" }}>
         {LOTES.filter((l) => l.loteNum).map((lote) => {
           const isSelected = selectedLote === lote.loteNum;

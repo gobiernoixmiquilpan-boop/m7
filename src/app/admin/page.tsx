@@ -1022,7 +1022,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <AdminMap
-                submissions={withGps as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number; lng: number; tipoTierra: string; superficie: string; predio: string; lote: string }[]}
+                submissions={withGps as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number; lng: number; tipoTierra: string; superficie: string; predio: string; lote: string; status?: string }[]}
                 onSelectSubmission={(id) => {
                   const sub = submissions.find((s) => s.id === id);
                   if (sub) setSelected(sub);
