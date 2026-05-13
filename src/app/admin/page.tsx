@@ -138,61 +138,97 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
 }) {
   const [showPw, setShowPw] = useState(false);
   return (
-    <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
-      <div className="bg-white rounded-3xl shadow-xl p-8 max-w-xs w-full text-center">
-        <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center mx-auto mb-5 bg-guinda-100">
-          <Image src="/logo.svg" alt="RegulaTierra" width={40} height={40} />
-        </div>
-        <h1 className="text-xl font-bold text-guinda-800 mb-1">Panel Administrativo</h1>
-        <p className="text-gray-400 text-sm mb-6">Regularización de Tierras · Capula 2026</p>
-        <div className="space-y-3 mb-4 text-left">
-          <input
-            type="email" placeholder="Correo electrónico" value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
-            disabled={blocked}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
-          />
-          <div className="relative">
-            <input
-              type={showPw ? "text" : "password"} placeholder="Contraseña" value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
-              disabled={blocked}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50 disabled:opacity-50"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw((v) => !v)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-              tabIndex={-1}
-              aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}
-            >
-              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+    <main className="min-h-screen flex items-center justify-center p-5 relative overflow-hidden"
+      style={{ background: "linear-gradient(145deg,#3d0918 0%,#6e112c 55%,#8e1a3c 100%)" }}>
+      {/* Decoración de fondo */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.07]"
+          style={{ background: "radial-gradient(circle,white 0%,transparent 70%)" }} />
+        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full opacity-[0.07]"
+          style={{ background: "radial-gradient(circle,white 0%,transparent 70%)" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04]"
+          style={{ background: "radial-gradient(circle,white 0%,transparent 60%)" }} />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm">
+        {/* Logo + título */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-3xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center mx-auto mb-4 shadow-xl">
+            <Image src="/logo.svg" alt="RegulaTierra" width={46} height={46} />
           </div>
+          <h1 className="text-2xl font-black text-white tracking-tight">Panel Admin</h1>
+          <p className="text-white/50 text-sm mt-1">Regularización de Tierras · Capula 2026</p>
         </div>
-        {expired && <p className="text-xs text-yellow-600 mb-3 font-medium">Sesión expirada. Vuelve a ingresar.</p>}
-        {blocked && (
-          <p className="text-xs text-red-600 mb-3 font-semibold bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-            Acceso bloqueado por 15 minutos por demasiados intentos fallidos.
-          </p>
-        )}
-        {error && !blocked && (
-          <div className="mb-3">
-            <p className="text-xs text-red-500">Correo o contraseña incorrectos.</p>
-            {remaining !== null && remaining <= 2 && remaining > 0 && (
-              <p className="text-xs text-orange-500 mt-1 font-semibold">
-                {remaining} intento{remaining !== 1 ? "s" : ""} restante{remaining !== 1 ? "s" : ""} antes del bloqueo.
-              </p>
-            )}
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-2xl p-7">
+          <div className="space-y-3 mb-5">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-0.5">Correo electrónico</label>
+              <input
+                type="email" placeholder="admin@ejemplo.com" value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
+                disabled={blocked}
+                className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-guinda-400 bg-gray-50/80 transition-colors disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-0.5">Contraseña</label>
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"} placeholder="••••••••" value={pw}
+                  onChange={(e) => setPw(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
+                  disabled={blocked}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-guinda-400 bg-gray-50/80 transition-colors disabled:opacity-50"
+                />
+                <button type="button" onClick={() => setShowPw((v) => !v)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-300 hover:text-gray-500 transition-colors"
+                  tabIndex={-1} aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"}>
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-        <button onClick={onLogin} disabled={loading || blocked}
-          className="w-full bg-guinda-700 hover:bg-guinda-800 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
-          {loading && <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />}
-          {loading ? "Ingresando…" : "Ingresar"}
-        </button>
+
+          {/* Mensajes de error */}
+          {expired && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4">
+              <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" strokeWidth={2.5} />
+              <p className="text-xs text-amber-700 font-medium">Sesión expirada. Vuelve a ingresar.</p>
+            </div>
+          )}
+          {blocked && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+              <X className="w-3.5 h-3.5 text-red-500 shrink-0" strokeWidth={2.5} />
+              <p className="text-xs text-red-700 font-semibold">Acceso bloqueado 15 min por demasiados intentos.</p>
+            </div>
+          )}
+          {error && !blocked && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mb-4">
+              <X className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+              <div>
+                <p className="text-xs text-red-700 font-semibold">Correo o contraseña incorrectos.</p>
+                {remaining !== null && remaining <= 2 && remaining > 0 && (
+                  <p className="text-xs text-orange-600 mt-0.5">
+                    {remaining} intento{remaining !== 1 ? "s" : ""} restante{remaining !== 1 ? "s" : ""} antes del bloqueo.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <button onClick={onLogin} disabled={loading || blocked}
+            className="w-full text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60 active:scale-[.98]"
+            style={{ background: loading || blocked ? undefined : "linear-gradient(135deg,#6e112c,#9e1c42)" }}>
+            {loading
+              ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Ingresando…</>
+              : "Ingresar al panel"}
+          </button>
+        </div>
+
+        <p className="text-center text-white/25 text-xs mt-6">Contraloría Municipal · Ixmiquilpan</p>
       </div>
     </main>
   );
@@ -326,10 +362,12 @@ function LotesView({ submissions, onSelect }: { submissions: Submission[]; onSel
 function StatCard({ label, value, sub, icon, color = "guinda" }: {
   label: string; value: number | string; sub?: string; icon: React.ReactNode; color?: string;
 }) {
-  const bg   = color === "blue" ? "bg-blue-100"    : color === "emerald" ? "bg-emerald-100"    : "bg-guinda-100";
-  const text = color === "blue" ? "text-blue-700"  : color === "emerald" ? "text-emerald-700"  : "text-guinda-700";
+  const bg     = color === "blue" ? "bg-blue-100"    : color === "emerald" ? "bg-emerald-100"    : "bg-guinda-100";
+  const text   = color === "blue" ? "text-blue-700"  : color === "emerald" ? "text-emerald-700"  : "text-guinda-700";
+  const accent = color === "blue" ? "#3b82f6"        : color === "emerald" ? "#10b981"           : "#6e112c";
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
+    <div className="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100 border-l-4"
+      style={{ borderLeftColor: accent }}>
       <div className={`w-12 h-12 rounded-2xl ${bg} ${text} flex items-center justify-center shrink-0`}>
         {icon}
       </div>
@@ -647,6 +685,10 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
       <span className={`text-sm text-gray-700 text-right ${mono ? "font-mono text-xs break-all" : ""}`}>{value}</span>
     </div>
   );
+}
+
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0] ?? "").join("").toUpperCase();
 }
 
 function getPageNumbers(current: number, total: number): (number | null)[] {
@@ -1370,7 +1412,14 @@ export default function AdminPage() {
                         <tr key={s.id} onClick={() => setSelected(s)}
                           className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
                           <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>
-                          <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{s.nombreCompleto}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-guinda-100 text-guinda-700 flex items-center justify-center text-[10px] font-black shrink-0 select-none">
+                                {initials(s.nombreCompleto)}
+                              </div>
+                              <span className="font-medium text-gray-800">{s.nombreCompleto}</span>
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{s.comunidad}</td>
                           <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">{s.lote || "—"}</td>
                           <td className="px-4 py-3">
@@ -1450,7 +1499,10 @@ export default function AdminPage() {
       )}
 
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white whitespace-nowrap pointer-events-none ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white whitespace-nowrap pointer-events-none animate-slide-up ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
+          {toast.ok
+            ? <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+            : <X className="w-4 h-4 shrink-0" strokeWidth={2.5} />}
           {toast.msg}
         </div>
       )}
