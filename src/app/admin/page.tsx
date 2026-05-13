@@ -8,12 +8,12 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { LOTES } from "@/lib/lots";
+import { LOTES, type Lote } from "@/lib/lots";
 import {
   Users, MapPin, Droplets, CloudRain, LogOut, Download,
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
   FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
-  ArrowUp, ArrowDown, ZoomIn, Check, Copy,
+  ArrowUp, ArrowDown, ZoomIn, Check, Copy, Layers, BarChart2, Clock,
 } from "lucide-react";
 
 function Eye({ className }: { className?: string }) {
@@ -195,6 +195,130 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
         </button>
       </div>
     </main>
+  );
+}
+
+/* ──────────────────── Por lote ──────────────────── */
+function LoteCard({ lote, items, onSelect }: {
+  lote: Pick<Lote, "id" | "nombre" | "color" | "fillColor" | "loteNum" | "predioNum">;
+  items: Submission[];
+  onSelect: (s: Submission) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const totalSup = items.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+  const riego = items.filter((s) => s.tipoTierra === "riego").length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-4 hover:bg-gray-50/60 transition-colors text-left"
+      >
+        <div className="w-1 self-stretch rounded-full shrink-0 min-h-[36px]" style={{ background: lote.fillColor }} />
+        <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-center"
+          style={{ background: `${lote.fillColor}22`, border: `2px solid ${lote.color}` }}>
+          <span className="font-black leading-none" style={{ fontSize: 9, color: lote.color }}>
+            {lote.loteNum.length > 6 ? lote.loteNum.slice(0, 5) + "…" : lote.loteNum}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-gray-800 truncate">{lote.nombre}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Predio {lote.predioNum} · {totalSup.toFixed(1)} ha
+            {riego > 0 && ` · ${riego} riego`}
+            {(items.length - riego) > 0 && ` · ${items.length - riego} temporal`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-2xl font-black text-gray-800">{items.length}</span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} strokeWidth={2} />
+        </div>
+      </button>
+
+      <div className="flex gap-1.5 px-4 pb-3 flex-wrap">
+        {STATUS_OPTIONS.map((o) => {
+          const n = items.filter((s) => (s.status ?? "pendiente") === o.value).length;
+          if (!n) return null;
+          return (
+            <span key={o.value} className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${o.cls}`}>
+              {o.label}: {n}
+            </span>
+          );
+        })}
+      </div>
+
+      {open && (
+        <div className="border-t border-gray-100">
+          {items.map((s) => (
+            <button key={s.id} onClick={() => onSelect(s)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-guinda-50/40 border-b border-gray-50 last:border-0 transition-colors text-left">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${
+                s.status === "aprobado"  ? "bg-emerald-400" :
+                s.status === "rechazado" ? "bg-red-400" :
+                s.status === "revision"  ? "bg-yellow-400" : "bg-gray-300"
+              }`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{s.nombreCompleto}</p>
+                <p className="text-xs text-gray-400">{s.comunidad} · {s.superficie} ha · {s.tipoTierra === "riego" ? "Riego" : "Temporal"}</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
+                  {statusLabel(s.status)}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LotesView({ submissions, onSelect }: { submissions: Submission[]; onSelect: (s: Submission) => void }) {
+  const porLote = LOTES.filter((l) => l.loteNum).map((lote) => ({
+    lote,
+    items: submissions.filter((s) => s.lote === lote.loteNum),
+  }));
+  const conItems = porLote.filter((x) => x.items.length > 0);
+  const sinItems = porLote.filter((x) => x.items.length === 0);
+  const sinLote  = submissions.filter((s) => !s.lote || !LOTES.find((l) => l.loteNum === s.lote));
+
+  if (submissions.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center py-16 text-gray-400">
+        <Layers className="w-10 h-10 mb-2 opacity-25" strokeWidth={1} />
+        <p className="text-sm">Aún no hay registros</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {conItems.map(({ lote, items }) => (
+        <LoteCard key={lote.id} lote={lote} items={items} onSelect={onSelect} />
+      ))}
+      {sinLote.length > 0 && (
+        <LoteCard
+          lote={{ id: "sin-lote", nombre: "Sin lote asignado", color: "#9ca3af", fillColor: "#d1d5db", loteNum: "—", predioNum: "—" }}
+          items={sinLote}
+          onSelect={onSelect}
+        />
+      )}
+      {sinItems.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2 px-1">Lotes sin solicitudes</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {sinItems.map(({ lote }) => (
+              <div key={lote.id} className="rounded-xl border border-gray-100 px-3 py-2 flex items-center gap-2 opacity-40">
+                <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: lote.fillColor, border: `1.5px solid ${lote.color}` }} />
+                <span className="text-xs font-semibold text-gray-500 truncate">{lote.loteNum}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -553,7 +677,7 @@ export default function AdminPage() {
   const [page,            setPage]            = useState(1);
   const [selected,        setSelected]        = useState<Submission | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [activeTab,       setActiveTab]       = useState<"mapa" | "graficas" | "tabla">("tabla");
+  const [activeTab,       setActiveTab]       = useState<"mapa" | "graficas" | "lotes" | "tabla">("tabla");
   const [mountedTabs,     setMountedTabs]     = useState(new Set<string>(["tabla"]));
   const [toast,           setToast]           = useState<{ msg: string; ok: boolean } | null>(null);
   const [lastUpdated,     setLastUpdated]     = useState<Date | null>(null);
@@ -605,7 +729,7 @@ export default function AdminPage() {
     toastTimer.current = setTimeout(() => setToast(null), 3500);
   }
 
-  function changeTab(tab: "mapa" | "graficas" | "tabla") {
+  function changeTab(tab: "mapa" | "graficas" | "lotes" | "tabla") {
     setMountedTabs(prev => new Set([...prev, tab]));
     setActiveTab(tab);
     if (tab === "graficas") setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
@@ -933,7 +1057,8 @@ export default function AdminPage() {
           <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
         </div>
         {lastUpdated && (
-          <span className="text-guinda-300 text-[11px] hidden sm:block shrink-0">
+          <span className="text-guinda-300 text-[11px] hidden sm:flex items-center gap-1 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
@@ -983,16 +1108,20 @@ export default function AdminPage() {
         {total > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {STATUS_OPTIONS.map((o) => {
-              const count = submissions.filter(
-                (s) => (s.status ?? "pendiente") === o.value
-              ).length;
+              const count = submissions.filter((s) => (s.status ?? "pendiente") === o.value).length;
+              const Icon = o.value === "pendiente" ? Clock : o.value === "revision" ? RefreshCw : o.value === "aprobado" ? Check : X;
+              const active = filterStatus === o.value;
               return (
                 <button key={o.value}
-                  onClick={() => { setFilterStatus(filterStatus === o.value ? "" : o.value); changeTab("tabla"); setPage(1); skipPageScroll.current = true; }}
-                  title={filterStatus === o.value ? `Quitar filtro: ${o.label}` : `Filtrar por: ${o.label}`}
-                  className={`rounded-2xl px-4 py-3 border border-black/5 text-left transition-all hover:opacity-85 active:scale-[.98] ${o.cls} ${filterStatus === o.value ? "ring-2 ring-offset-1 ring-current" : ""}`}>
-                  <p className="text-2xl font-bold">{count}</p>
-                  <p className="text-xs font-semibold opacity-70 mt-0.5">{o.label}</p>
+                  onClick={() => { setFilterStatus(active ? "" : o.value); changeTab("tabla"); setPage(1); skipPageScroll.current = true; }}
+                  title={active ? `Quitar filtro: ${o.label}` : `Filtrar por: ${o.label}`}
+                  className={`rounded-2xl px-4 py-3.5 border border-black/5 text-left transition-all hover:opacity-90 active:scale-[.98] ${o.cls} ${active ? "ring-2 ring-offset-1 ring-current shadow-sm" : ""}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <Icon className="w-4 h-4 opacity-60" strokeWidth={2} />
+                    {active && <span className="text-[10px] font-bold opacity-60 uppercase tracking-wide">filtro</span>}
+                  </div>
+                  <p className="text-3xl font-black leading-none">{count}</p>
+                  <p className="text-xs font-semibold opacity-70 mt-1">{o.label}</p>
                 </button>
               );
             })}
@@ -1000,15 +1129,25 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5">
-          {(["mapa", "graficas", "tabla"] as const).map((tab) => (
-            <button key={tab} onClick={() => changeTab(tab)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                activeTab === tab ? "bg-guinda-700 text-white shadow-sm" : "text-gray-500 hover:text-guinda-700 hover:bg-guinda-50"
-              }`}>
-              {tab === "mapa" ? "Mapa" : tab === "graficas" ? "Gráficas" : "Registros"}
-            </button>
-          ))}
+        <div className="flex gap-1.5 bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5">
+          {([
+            { id: "mapa",    label: "Mapa",      Icon: MapPin    },
+            { id: "lotes",   label: "Por lote",  Icon: Layers    },
+            { id: "graficas",label: "Gráficas",  Icon: BarChart2 },
+            { id: "tabla",   label: "Registros", Icon: FileText  },
+          ] as const).map(({ id, label, Icon }) => {
+            const active = activeTab === id;
+            return (
+              <button key={id} onClick={() => changeTab(id)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  active ? "bg-guinda-700 text-white shadow-sm" : "text-gray-500 hover:text-guinda-700 hover:bg-guinda-50"
+                }`}>
+                <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{label.split(" ")[0]}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* MAPA */}
@@ -1035,6 +1174,13 @@ export default function AdminPage() {
                 </p>
               )}
             </div>
+          </div>
+        )}
+
+        {/* POR LOTE */}
+        {mountedTabs.has("lotes") && (
+          <div className={activeTab !== "lotes" ? "hidden" : ""}>
+            <LotesView submissions={submissions} onSelect={(s) => setSelected(s)} />
           </div>
         )}
 
