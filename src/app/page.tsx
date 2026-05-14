@@ -161,35 +161,16 @@ async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promi
 
 export default function Home() {
   const [step,        setStep]        = useState(0);
-  const [form,        setForm]        = useState<FormData>(() => {
-    if (typeof window === "undefined") return emptyForm;
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) return { ...emptyForm, ...(JSON.parse(saved) as DraftFields) };
-    } catch { /* noop */ }
-    return emptyForm;
-  });
+  const [form,        setForm]        = useState<FormData>(emptyForm);
   const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null });
   const [submitted,          setSubmitted]          = useState(false);
   const [submittedId,        setSubmittedId]        = useState("");
   const [submittedOffline,   setSubmittedOffline]   = useState(false);
   const [submittedOfflineId, setSubmittedOfflineId] = useState("");
   const [canInstall,         setCanInstall]         = useState(false);
-  const [hasDraft,           setHasDraft]           = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null") as DraftFields | null;
-      return !!(d && (d.nombreCompleto || d.comunidad || d.ubicacion));
-    } catch { return false; }
-  });
+  const [hasDraft,           setHasDraft]           = useState(false);
   const installPrompt = useRef<{ prompt: () => Promise<void> } | null>(null);
-  const [pendingCount,     setPendingCount]     = useState(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const q = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]") as unknown[];
-      return Array.isArray(q) ? q.length : 0;
-    } catch { return 0; }
-  });
+  const [pendingCount,     setPendingCount]     = useState(0);
   const [loading,      setLoading]      = useState(false);
   const [compressing,  setCompressing]  = useState(false);
   const [copied,       setCopied]       = useState(false);
@@ -209,6 +190,23 @@ export default function Home() {
   const stepDir       = useRef<"forward" | "back">("forward");
   const retryTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraining    = useRef(false);
+
+  /* ── Load from localStorage after mount (evita hydration mismatch) ── */
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as DraftFields;
+        skipFirstSave.current = true;
+        setForm((f) => ({ ...f, ...parsed }));
+        if (parsed.nombreCompleto || parsed.comunidad || parsed.ubicacion) setHasDraft(true);
+      }
+    } catch { /* noop */ }
+    try {
+      const q = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]") as unknown[];
+      if (Array.isArray(q)) setPendingCount(q.length);
+    } catch { /* noop */ }
+  }, []);
 
   /* ── Draft save ── */
   useEffect(() => {
