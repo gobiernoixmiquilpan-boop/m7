@@ -51,7 +51,7 @@ const STATUS_MAP = {
     iconColor: "text-emerald-600",
   },
   rechazado: {
-    label: "No aprobado",
+    label: "No aprobada",
     description: "Tu solicitud no pudo ser aprobada en esta etapa. Acude a la ventanilla municipal con tu folio para conocer los motivos y opciones.",
     Icon: XCircle,
     cardBg: "bg-red-50",
@@ -77,7 +77,7 @@ export default async function ConsultaFolioPage({
 
   const { data, error } = await supabase
     .from("submissions")
-    .select("id, status, comunidad, timestamp, nombreCompleto")
+    .select("id, status, comunidad, timestamp, nombreCompleto, motivoRechazo")
     .ilike("id", `%${suffix}`)
     .limit(1)
     .maybeSingle();
@@ -128,6 +128,12 @@ export default async function ConsultaFolioPage({
               {s.label}
             </span>
             <p className="text-sm text-gray-600 leading-relaxed">{s.description}</p>
+            {statusKey === "rechazado" && (data.motivoRechazo as string | null) && (
+              <div className="mt-4 bg-red-100 border border-red-200 rounded-xl px-4 py-3 text-left">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Motivo</p>
+                <p className="text-sm text-red-700 leading-relaxed">{data.motivoRechazo as string}</p>
+              </div>
+            )}
           </div>
 
           {/* Datos de la solicitud */}

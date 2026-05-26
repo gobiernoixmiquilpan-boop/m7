@@ -30,6 +30,31 @@ function validatePost(fd: FormData): string | null {
 const VALID_SORT_KEYS = ["timestamp", "nombreCompleto", "comunidad", "status", "superficie", "tipoTierra"] as const;
 type SortKey = typeof VALID_SORT_KEYS[number];
 
+// Rate limiting para POST (ciudadanos): 3 envíos por IP por hora
+const postAttempts = new Map<string, { count: number; resetAt: number }>();
+const POST_LIMIT   = 3;
+const POST_WINDOW  = 60 * 60 * 1000;
+
+function getIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
+
+function checkPostRateLimit(ip: string): boolean {
+  const now   = Date.now();
+  const entry = postAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    postAttempts.set(ip, { count: 1, resetAt: now + POST_WINDOW });
+    return true;
+  }
+  if (entry.count >= POST_LIMIT) return false;
+  entry.count += 1;
+  return true;
+}
+
 export async function GET(req: NextRequest) {
   return withAdminAuth(req, async () => {
     const p          = req.nextUrl.searchParams;
@@ -92,12 +117,20 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getIp(req);
+  if (!checkPostRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Demasiados envíos. Intenta de nuevo en una hora." },
+      { status: 429 }
+    );
+  }
+
   const fd = await req.formData();
 
   const validationError = validatePost(fd);
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
-  // CURP duplicate check
+  // Verificar CURP duplicada
   const curpValue = (fd.get("curp") as string | null)?.trim() ?? "";
   const { data: existingCurp } = await supabase
     .from("submissions")
@@ -147,7 +180,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `La foto "${field}" supera el límite de 10 MB` }, { status: 400 });
   }
 
-  // Guardar fotos en Storage (privado) — el path se guarda en la columna *Url
+  // Subir fotos a Storage (privado)
   const uploadResults = await Promise.allSettled(
     ["fotoCasa", "fotoINEFrente", "fotoINEAtras"].map(async (field) => {
       const file = fd.get(field) as File | null;
@@ -181,6 +214,10 @@ export async function POST(req: NextRequest) {
     console.error("[POST /api/submissions] insert:", error.code, error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Registrar en historial
+  await supabase.from("status_history").insert({ submission_id: id, status: "pendiente" });
+
   return NextResponse.json({ ok: true, id });
 }
 
@@ -188,13 +225,34 @@ const VALID_STATUSES = ["pendiente", "revision", "aprobado", "rechazado"] as con
 
 export async function PATCH(req: NextRequest) {
   return withAdminAuth(req, async () => {
-    let body: { id?: string; status?: string };
+    let body: { id?: string; status?: string; motivoRechazo?: string; notas?: string };
     try { body = await req.json(); } catch { return NextResponse.json({ error: "JSON inválido" }, { status: 400 }); }
-    const { id, status } = body;
+    const { id, status, motivoRechazo, notas } = body;
     if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
-    if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number]))
-      return NextResponse.json({ error: "status inválido" }, { status: 400 });
-    const { error } = await supabase.from("submissions").update({ status }).eq("id", id);
+
+    const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+
+    if (status !== undefined) {
+      if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number]))
+        return NextResponse.json({ error: "status inválido" }, { status: 400 });
+      updateData.status = status;
+      if (status === "rechazado" && motivoRechazo !== undefined) {
+        updateData.motivoRechazo = motivoRechazo;
+      }
+      if (status !== "rechazado") {
+        updateData.motivoRechazo = null;
+      }
+      // Registrar cambio en historial
+      await supabase.from("status_history").insert({
+        submission_id: id,
+        status,
+        motivo: status === "rechazado" ? (motivoRechazo ?? null) : null,
+      });
+    }
+
+    if (notas !== undefined) updateData.notas = notas;
+
+    const { error } = await supabase.from("submissions").update(updateData).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   });

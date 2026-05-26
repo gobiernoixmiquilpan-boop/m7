@@ -63,6 +63,9 @@ interface Submission {
   fotoCasaUrl?: string;
   fotoINEFrenteUrl?: string;
   fotoINEAtrasUrl?: string;
+  motivoRechazo?: string;
+  notas?: string;
+  updated_at?: string;
 }
 
 const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
@@ -489,18 +492,26 @@ function printSubmission(s: Submission) {
   w.document.close();
 }
 
+type HistoryEntry = { id: number; status: string; motivo: string | null; created_at: string };
+
 /* ──────────────────── Detail modal ──────────────────── */
-function DetailModal({ s, onClose, onStatusChange, onDelete }: {
+function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
   s: Submission;
   onClose: () => void;
-  onStatusChange: (id: string, status: string) => Promise<void>;
+  onStatusChange: (id: string, status: string, extras?: { motivoRechazo?: string }) => Promise<void>;
+  onSaveNotes: (id: string, notas: string) => Promise<void>;
   onDelete: (id: string) => void;
 }) {
-  const [status,     setStatus]     = useState(s.status ?? "pendiente");
-  const [saving,     setSaving]     = useState(false);
-  const [lightbox,   setLightbox]   = useState<string | null>(null);
-  const [copied,     setCopied]     = useState(false);
-  const [copiedCurp, setCopiedCurp] = useState(false);
+  const [status,        setStatus]       = useState(s.status ?? "pendiente");
+  const [saving,        setSaving]       = useState(false);
+  const [lightbox,      setLightbox]     = useState<string | null>(null);
+  const [copied,        setCopied]       = useState(false);
+  const [copiedCurp,    setCopiedCurp]   = useState(false);
+  const [motivoRechazo, setMotivoRechazo] = useState(s.motivoRechazo ?? "");
+  const [notasLocal,    setNotasLocal]   = useState(s.notas ?? "");
+  const [history,       setHistory]      = useState<HistoryEntry[]>([]);
+  const notasTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const motivoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -513,11 +524,35 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
+  useEffect(() => {
+    fetch(`/api/submissions/history?id=${s.id}`)
+      .then((r) => r.json())
+      .then((d: HistoryEntry[]) => setHistory(d))
+      .catch(() => {});
+  }, [s.id]);
+
+  function handleNotasChange(v: string) {
+    setNotasLocal(v);
+    if (notasTimer.current) clearTimeout(notasTimer.current);
+    notasTimer.current = setTimeout(() => onSaveNotes(s.id, v), 1200);
+  }
+
+  function handleMotivoChange(v: string) {
+    setMotivoRechazo(v);
+    if (motivoTimer.current) clearTimeout(motivoTimer.current);
+    motivoTimer.current = setTimeout(() => onStatusChange(s.id, "rechazado", { motivoRechazo: v }), 1200);
+  }
 
   async function changeStatus(v: string) {
     setSaving(true);
     setStatus(v);
-    await onStatusChange(s.id, v);
+    if (v !== "rechazado") setMotivoRechazo("");
+    await onStatusChange(s.id, v, v === "rechazado" ? { motivoRechazo } : undefined);
+    // Recargar historial
+    fetch(`/api/submissions/history?id=${s.id}`)
+      .then((r) => r.json())
+      .then((d: HistoryEntry[]) => setHistory(d))
+      .catch(() => {});
     setSaving(false);
   }
 
@@ -575,6 +610,21 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
                 </button>
               ))}
             </div>
+            {status === "rechazado" && (
+              <div className="mt-3">
+                <label className="text-[10px] font-bold text-red-400 uppercase tracking-widest block mb-1.5">
+                  Motivo del rechazo
+                </label>
+                <textarea
+                  value={motivoRechazo}
+                  onChange={(e) => handleMotivoChange(e.target.value)}
+                  placeholder="Describe el motivo del rechazo para informar al ciudadano…"
+                  rows={2}
+                  className="w-full text-sm border border-red-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 bg-red-50/50 resize-none"
+                />
+                <p className="text-[10px] text-gray-400 mt-0.5">Se guarda automáticamente · Visible para el ciudadano</p>
+              </div>
+            )}
           </div>
 
           {/* Fotos */}
@@ -659,6 +709,46 @@ function DetailModal({ s, onClose, onStatusChange, onDelete }: {
             )}
           </InfoSection>
 
+          {/* Notas del funcionario */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Notas internas</p>
+            <textarea
+              value={notasLocal}
+              onChange={(e) => handleNotasChange(e.target.value)}
+              placeholder="Agrega notas internas sobre esta solicitud (no visibles para el ciudadano)…"
+              rows={3}
+              className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-guinda-300 bg-gray-50 resize-none"
+            />
+            <p className="text-[10px] text-gray-400 mt-0.5">Se guarda automáticamente · Solo visible en el panel admin</p>
+          </div>
+
+          {/* Historial de estados */}
+          {history.length > 0 && (
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Historial de estados</p>
+              <div className="space-y-2.5">
+                {history.map((h) => {
+                  const opt = STATUS_OPTIONS.find((o) => o.value === h.status);
+                  const dot = ({ pendiente: "bg-gray-400", revision: "bg-yellow-400", aprobado: "bg-emerald-400", rechazado: "bg-red-400" } as Record<string, string>)[h.status] ?? "bg-gray-400";
+                  return (
+                    <div key={h.id} className="flex items-start gap-2.5">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${opt?.cls ?? "bg-gray-100 text-gray-600"}`}>
+                          {opt?.label ?? h.status}
+                        </span>
+                        {h.motivo && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{h.motivo}</p>}
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {new Date(h.created_at).toLocaleString("es-MX", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-gray-400 text-center">
             Registrado el {new Date(s.timestamp).toLocaleString("es-MX", {
               day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -738,8 +828,8 @@ function getPageNumbers(current: number, total: number): (number | null)[] {
 /* ──────────────────── Admin principal ──────────────────── */
 export default function AdminPage() {
   useEffect(() => { document.title = "Panel Administrativo · Capula 2026"; }, []);
-  const [authed,          setAuthed]          = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") === "1");
-  const [checkingAuth,    setCheckingAuth]    = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") !== "1");
+  const [authed,          setAuthed]          = useState(false);
+  const [checkingAuth,    setCheckingAuth]    = useState(true);
   const [email,           setEmail]           = useState("");
   const [pw,              setPw]              = useState("");
   const [loginLoading,    setLoginLoading]    = useState(false);
@@ -748,7 +838,7 @@ export default function AdminPage() {
   const [loginRemaining,  setLoginRemaining]  = useState<number | null>(null);
   const [sessionExpired,  setSessionExpired]  = useState(false);
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
-  const [loading,         setLoading]         = useState(() => typeof window !== "undefined" && sessionStorage.getItem("admin-ok") === "1");
+  const [loading,         setLoading]         = useState(false);
   const [fetchError,      setFetchError]      = useState<string | null>(null);
   const [search,          setSearch]          = useState("");
   const [filterComunidad, setFilterComunidad] = useState("");
@@ -763,6 +853,9 @@ export default function AdminPage() {
   const [sortKey,         setSortKey]         = useState<keyof Submission>("timestamp");
   const [sortDir,         setSortDir]         = useState<"asc" | "desc">("desc");
   const [filterPeriod,    setFilterPeriod]    = useState("");
+  const [selectedIds,  setSelectedIds]  = useState(new Set<string>());
+  const [bulkStatus,   setBulkStatus]   = useState("");
+  const [bulkSaving,   setBulkSaving]   = useState(false);
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFetching     = useRef(false);
   const [tableData,    setTableData]    = useState<Submission[]>([]);
@@ -876,11 +969,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (sessionStorage.getItem("admin-ok") === "1") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthed(true);
+      setCheckingAuth(false);
       fetchData();
       return () => { isFetching.current = false; };
     }
-    // sessionStorage cleared (new tab / browser restart) but cookies may still be valid
+    // sessionStorage cleared (nueva pestaña / reinicio) pero la cookie puede seguir válida
     fetch("/api/submissions")
       .then(async (res) => {
         if (res.ok) {
@@ -890,9 +984,9 @@ export default function AdminPage() {
           setLastUpdated(new Date());
           setAuthed(true);
         }
-        // 401 → just show login screen (don't set authed)
+        // 401 → mostrar pantalla de login (no cambiar authed)
       })
-      .catch(() => {}) // network error → show login
+      .catch(() => {}) // error de red → mostrar login
       .finally(() => setCheckingAuth(false));
   }, [fetchData]);
 
@@ -1018,16 +1112,57 @@ export default function AdminPage() {
     if (selected?.id === id) setSelected(null);
   }
 
-  async function updateStatus(id: string, status: string) {
+  async function updateStatus(id: string, status: string, extras?: { motivoRechazo?: string }) {
+    const body: Record<string, unknown> = { id, status };
+    if (extras?.motivoRechazo !== undefined) body.motivoRechazo = extras.motivoRechazo;
     const res = await fetch("/api/submissions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) { showToast("No se pudo actualizar el estado.", false); return; }
-    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
-    setTableData((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
-    setSelected((prev) => prev?.id === id ? { ...prev, status } : prev);
+    const patch = { status, ...(extras?.motivoRechazo !== undefined ? { motivoRechazo: extras.motivoRechazo } : {}) };
+    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, ...patch } : s));
+    setTableData((prev) => prev.map((s) => s.id === id ? { ...s, ...patch } : s));
+    setSelected((prev) => prev?.id === id ? { ...prev, ...patch } : prev);
+    showToast(`Estado actualizado: ${STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status}`);
+  }
+
+  async function saveNotes(id: string, notas: string) {
+    const res = await fetch("/api/submissions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, notas }),
+    });
+    if (!res.ok) { showToast("No se pudo guardar la nota.", false); return; }
+    setSubmissions((prev) => prev.map((s) => s.id === id ? { ...s, notas } : s));
+    setSelected((prev) => prev?.id === id ? { ...prev, notas } : prev);
+  }
+
+  async function bulkUpdateStatus(status: string) {
+    if (!status || selectedIds.size === 0) return;
+    setBulkSaving(true);
+    const ids = [...selectedIds];
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch("/api/submissions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, status }),
+        })
+      )
+    );
+    const ok = results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
+    const fail = ids.length - ok;
+    if (ok > 0) {
+      setSubmissions((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, status } : s));
+      setTableData((prev) => prev.map((s) => ids.includes(s.id) ? { ...s, status } : s));
+    }
+    setSelectedIds(new Set());
+    setBulkStatus("");
+    setBulkSaving(false);
+    if (fail > 0) showToast(`${ok} actualizados, ${fail} fallaron.`, false);
+    else showToast(`${ok} registros actualizados a "${STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status}".`);
   }
 
   function exportCSV() {
@@ -1050,6 +1185,22 @@ export default function AdminPage() {
     a.download = `registros-capula-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function exportXLSX() {
+    const XLSX = await import("xlsx");
+    const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Lote",
+      "Tipo", "Superficie (ha)", "Dialecto ñhañhu", "Estado", "Motivo rechazo", "Notas", "Ubicación", "Fecha"];
+    const rows = filtered.map((s) => [
+      folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio ?? "", s.lote ?? "",
+      s.tipoTierra, s.superficie, s.hablaDialecto, statusLabel(s.status),
+      s.motivoRechazo ?? "", s.notas ?? "", s.ubicacion,
+      new Date(s.timestamp).toLocaleDateString("es-MX"),
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Solicitudes");
+    XLSX.writeFile(wb, `registros-capula-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   /* ── Filter ── */
@@ -1149,6 +1300,10 @@ export default function AdminPage() {
         <button onClick={exportCSV} title="Exportar CSV" aria-label="Exportar a CSV"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <Download className="w-4 h-4" strokeWidth={2} />
+        </button>
+        <button onClick={exportXLSX} title="Exportar Excel (.xlsx)" aria-label="Exportar a Excel"
+          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-emerald-300 hover:text-emerald-200">
+          <FileText className="w-4 h-4" strokeWidth={2} />
         </button>
         <button onClick={logout} title="Salir" aria-label="Cerrar sesión"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
@@ -1433,6 +1588,17 @@ export default function AdminPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 bg-gray-50/80">
+                        <th className="px-3 py-3 w-8" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded accent-guinda-700 cursor-pointer"
+                            checked={selectedIds.size > 0 && tableData.every((s) => selectedIds.has(s.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedIds(new Set(tableData.map((s) => s.id)));
+                              else setSelectedIds(new Set());
+                            }}
+                          />
+                        </th>
                         <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3 whitespace-nowrap">Folio</th>
                         {([
                           ["Nombre",    "nombreCompleto"],
@@ -1464,7 +1630,21 @@ export default function AdminPage() {
                         const av = avatarCls(s.nombreCompleto);
                         return (
                         <tr key={s.id} onClick={() => setSelected(s)}
-                          className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"}`}>
+                          className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"} ${selectedIds.has(s.id) ? "bg-guinda-50/60" : ""}`}>
+                          <td className="px-3 py-3 w-8" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded accent-guinda-700 cursor-pointer"
+                              checked={selectedIds.has(s.id)}
+                              onChange={(e) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(s.id); else next.delete(s.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </td>
                           <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
@@ -1539,8 +1719,32 @@ export default function AdminPage() {
           s={selected}
           onClose={() => setSelected(null)}
           onStatusChange={updateStatus}
+          onSaveNotes={saveNotes}
           onDelete={(id) => setDeleteConfirmId(id)}
         />
+      )}
+
+      {/* Barra de acción masiva */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 bg-guinda-800 text-white px-5 py-3 rounded-2xl shadow-2xl animate-slide-up">
+          <span className="text-sm font-semibold shrink-0">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
+          <div className="relative">
+            <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}
+              className="bg-white/10 border border-white/20 rounded-xl pl-3 pr-8 py-2 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-white/30">
+              <option value="">Cambiar estado…</option>
+              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" strokeWidth={2} />
+          </div>
+          <button onClick={() => bulkUpdateStatus(bulkStatus)} disabled={!bulkStatus || bulkSaving}
+            className="bg-white/15 hover:bg-white/25 disabled:opacity-40 px-4 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0">
+            {bulkSaving ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> : "Aplicar"}
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} title="Cancelar selección"
+            className="text-white/50 hover:text-white transition-colors shrink-0">
+            <X className="w-4 h-4" strokeWidth={2} />
+          </button>
+        </div>
       )}
 
       {/* Modal de confirmación de eliminación */}

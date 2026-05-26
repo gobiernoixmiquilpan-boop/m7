@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createToken } from "@/lib/auth";
+import { createHash, timingSafeEqual } from "crypto";
 
 const COOKIE_BASE = {
   httpOnly: true,
@@ -30,7 +31,7 @@ function isBlocked(ip: string): boolean {
 }
 
 function recordFailure(ip: string) {
-  const now  = Date.now();
+  const now   = Date.now();
   const entry = attempts.get(ip);
   if (!entry || now > entry.resetAt) {
     attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
@@ -41,6 +42,21 @@ function recordFailure(ip: string) {
 
 function clearFailures(ip: string) {
   attempts.delete(ip);
+}
+
+// Verifica la contraseña contra ADMIN_PASSWORD_HASH (SHA-256 hex de 64 chars).
+// Para generar el hash:
+//   Linux/macOS: echo -n "tu-contraseña" | sha256sum
+//   PowerShell:  (Get-FileHash -InputStream ([IO.MemoryStream]::new([Text.Encoding]::UTF8.GetBytes("tu-contraseña"))) -Algorithm SHA256).Hash.ToLower()
+function verifyPasswordHash(password: string): boolean {
+  const stored = (process.env.ADMIN_PASSWORD_HASH ?? "").toLowerCase().trim();
+  if (!stored || stored.length !== 64) return false;
+  const computed = createHash("sha256").update(password).digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(computed, "hex"), Buffer.from(stored, "hex"));
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -64,7 +80,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, remaining: Math.max(0, remaining) }, { status: 401 });
   }
 
-  // signInWithPassword requiere la anon key, no la service role key
+  // Verificación directa con hash SHA-256 (sin Supabase Auth)
+  if (process.env.ADMIN_PASSWORD_HASH) {
+    const ok = verifyPasswordHash(password);
+    if (!ok) {
+      recordFailure(ip);
+      const entry = attempts.get(ip);
+      const remaining = MAX_ATTEMPTS - (entry?.count ?? 0);
+      console.error(`[auth] fallo (hash) ip=${ip} remaining=${remaining}`);
+      return NextResponse.json({ ok: false, remaining: Math.max(0, remaining) }, { status: 401 });
+    }
+    clearFailures(ip);
+    const token = createToken(email.trim());
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set("admin_token", token, { ...COOKIE_BASE, maxAge: 60 * 60 * 8 });
+    return res;
+  }
+
+  // Fallback: Supabase Auth (requiere usuario en Supabase Auth Dashboard)
   const authClient = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
