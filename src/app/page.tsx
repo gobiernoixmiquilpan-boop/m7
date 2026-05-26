@@ -20,8 +20,9 @@ import {
   Droplets, CloudRain, Camera, Upload, AlertCircle, Check,
   ChevronDown, CheckCircle, ImageIcon, Loader2, ShieldCheck,
   ChevronLeft, ExternalLink, Wifi, Search, FileText, Trash2,
-  X, Copy, MessageCircle,
+  X, Copy, MessageCircle, QrCode,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 interface FormData {
   fotoCasa: File | null;
@@ -583,7 +584,21 @@ export default function Home() {
             <p className="text-white text-2xl font-bold font-mono tracking-wider">{folioNum}</p>
             <p className="text-guinda-300 text-[10px] mt-1">Guarda este número como comprobante</p>
           </div>
-          <p className="text-gray-500 text-sm mt-4 leading-relaxed">
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <div className="bg-white rounded-2xl p-3 shadow-sm border border-guinda-100">
+              <QRCodeSVG
+                value={`${typeof window !== "undefined" ? window.location.origin : ""}/consulta/${folioNum}`}
+                size={140}
+                fgColor="#6b1022"
+                level="M"
+              />
+            </div>
+            <p className="flex items-center gap-1.5 text-xs text-gray-400">
+              <QrCode className="w-3.5 h-3.5" strokeWidth={2} />
+              Escanea para consultar tu solicitud
+            </p>
+          </div>
+          <p className="text-gray-500 text-sm mt-2 leading-relaxed">
             Nos comunicaremos al número <strong>{form.celular}</strong>.
           </p>
           <button

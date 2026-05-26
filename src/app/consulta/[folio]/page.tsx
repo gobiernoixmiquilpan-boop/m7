@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle, Clock, XCircle, Search, ChevronLeft, Info } from "lucide-react";
+import { CheckCircle, Clock, XCircle, Search, ChevronLeft, Info, History } from "lucide-react";
 import ShareFolioButton from "@/components/ShareFolioButton";
 
 export async function generateMetadata({
@@ -84,6 +84,12 @@ export default async function ConsultaFolioPage({
 
   if (error || !data) notFound();
 
+  const { data: historial } = await supabase
+    .from("status_history")
+    .select("id, status, motivo, created_at")
+    .eq("submission_id", data.id)
+    .order("created_at", { ascending: true });
+
   const statusKey = (data.status ?? "pendiente") as keyof typeof STATUS_MAP;
   const s = STATUS_MAP[statusKey] ?? STATUS_MAP.pendiente;
   const { Icon } = s;
@@ -157,6 +163,43 @@ export default async function ConsultaFolioPage({
               ))}
             </div>
           </div>
+
+          {/* Historial de estados */}
+          {historial && historial.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center gap-2">
+                <History className="w-4 h-4 text-gray-400" strokeWidth={2} />
+                <p className="text-sm font-semibold text-gray-700">Historial del trámite</p>
+              </div>
+              <div className="px-5 py-4">
+                <ol className="relative border-l-2 border-gray-100 space-y-5 ml-2">
+                  {historial.map((h, i) => {
+                    const isLast = i === historial.length - 1;
+                    const labelMap: Record<string, { label: string; dot: string }> = {
+                      pendiente: { label: "Solicitud recibida",  dot: "bg-gray-400"    },
+                      revision:  { label: "En revisión",         dot: "bg-yellow-400"  },
+                      aprobado:  { label: "Aprobado",            dot: "bg-emerald-500" },
+                      rechazado: { label: "No aprobada",         dot: "bg-red-500"     },
+                    };
+                    const entry = labelMap[h.status as string] ?? { label: h.status as string, dot: "bg-gray-400" };
+                    const fechaH = new Date(h.created_at as string).toLocaleDateString("es-MX", {
+                      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                    });
+                    return (
+                      <li key={h.id as number} className="ml-4">
+                        <span className={`absolute -left-[9px] w-4 h-4 rounded-full border-2 border-white ${entry.dot} ${isLast ? "ring-2 ring-offset-1 ring-gray-200" : ""}`} />
+                        <p className={`text-sm font-semibold ${isLast ? "text-gray-800" : "text-gray-500"}`}>{entry.label}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{fechaH}</p>
+                        {h.motivo && (
+                          <p className="text-xs text-red-600 mt-1 leading-relaxed">{h.motivo as string}</p>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            </div>
+          )}
 
           {/* Nota */}
           <div className="flex items-start gap-2.5 bg-guinda-50 border border-guinda-100 rounded-2xl px-4 py-3">
