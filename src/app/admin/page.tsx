@@ -865,7 +865,7 @@ export default function AdminPage() {
   const tableRef       = useRef<HTMLDivElement>(null);
   const skipPageScroll = useRef(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [draftSearch,  setDraftSearch]  = useState("");
+  const [draftSearch,  setDraftSearch]  = useState(() => typeof window !== "undefined" ? (localStorage.getItem("adm-search") ?? "") : "");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSearch(v: string) {
