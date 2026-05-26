@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle, Clock, XCircle, Search, ChevronLeft, Info, History } from "lucide-react";
 import ShareFolioButton from "@/components/ShareFolioButton";
+import PrintComprobanteButton from "@/components/PrintComprobanteButton";
 
 export async function generateMetadata({
   params,
@@ -100,8 +101,8 @@ export default async function ConsultaFolioPage({
   });
 
   return (
-    <main className="min-h-screen bg-guinda-50 flex flex-col">
-      <header className="bg-guinda-800 rounded-b-[2rem] shadow-lg">
+    <main className="min-h-screen bg-guinda-50 flex flex-col print:bg-white print:min-h-0">
+      <header className="bg-guinda-800 rounded-b-[2rem] shadow-lg print:hidden">
         <div className="max-w-sm mx-auto px-5 pt-6 pb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">
@@ -121,7 +122,7 @@ export default async function ConsultaFolioPage({
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-10">
+      <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-10 print:hidden">
         <div className="w-full max-w-sm space-y-4">
 
           {/* Estado principal */}
@@ -210,12 +211,21 @@ export default async function ConsultaFolioPage({
           </div>
 
           {/* Acciones */}
-          <div className="space-y-3 pt-1">
+          <div className="space-y-3 pt-1 print:hidden">
             <Link href="/consulta"
               className="flex items-center justify-center gap-2 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all w-full">
               <Search className="w-4 h-4" strokeWidth={2} /> Consultar otro folio
             </Link>
             <ShareFolioButton folio={folio} />
+            <PrintComprobanteButton
+              folio={folio}
+              nombre={data.nombreCompleto as string}
+              comunidad={data.comunidad as string}
+              fecha={fecha}
+              estado={statusKey}
+              estadoLabel={s.label}
+              motivoRechazo={(data.motivoRechazo as string | null) ?? null}
+            />
             <div className="text-center">
               <Link href="/"
                 className="inline-flex items-center gap-1 text-xs text-guinda-600 hover:text-guinda-800 font-medium">

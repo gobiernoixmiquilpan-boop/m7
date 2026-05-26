@@ -840,9 +840,9 @@ export default function AdminPage() {
   const [submissions,     setSubmissions]     = useState<Submission[]>([]);
   const [loading,         setLoading]         = useState(false);
   const [fetchError,      setFetchError]      = useState<string | null>(null);
-  const [search,          setSearch]          = useState("");
-  const [filterComunidad, setFilterComunidad] = useState("");
-  const [filterStatus,    setFilterStatus]    = useState("");
+  const [search,          setSearch]          = useState(() => typeof window !== "undefined" ? (localStorage.getItem("adm-search") ?? "")  : "");
+  const [filterComunidad, setFilterComunidad] = useState(() => typeof window !== "undefined" ? (localStorage.getItem("adm-comunidad") ?? "") : "");
+  const [filterStatus,    setFilterStatus]    = useState(() => typeof window !== "undefined" ? (localStorage.getItem("adm-status") ?? "")    : "");
   const [page,            setPage]            = useState(1);
   const [selected,        setSelected]        = useState<Submission | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -852,7 +852,7 @@ export default function AdminPage() {
   const [lastUpdated,     setLastUpdated]     = useState<Date | null>(null);
   const [sortKey,         setSortKey]         = useState<keyof Submission>("timestamp");
   const [sortDir,         setSortDir]         = useState<"asc" | "desc">("desc");
-  const [filterPeriod,    setFilterPeriod]    = useState("");
+  const [filterPeriod,    setFilterPeriod]    = useState(() => typeof window !== "undefined" ? (localStorage.getItem("adm-period") ?? "") : "");
   const [selectedIds,  setSelectedIds]  = useState(new Set<string>());
   const [bulkStatus,   setBulkStatus]   = useState("");
   const [bulkSaving,   setBulkSaving]   = useState(false);
@@ -887,6 +887,7 @@ export default function AdminPage() {
     setFilterPeriod("");
     setPage(1);
     skipPageScroll.current = true;
+    ["adm-search", "adm-comunidad", "adm-status", "adm-period"].forEach((k) => localStorage.removeItem(k));
   }
 
   function toggleSort(key: keyof Submission) {
@@ -994,6 +995,14 @@ export default function AdminPage() {
   useEffect(() => {
     tableParamsRef.current = { page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir };
   }, [page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir]);
+
+  // Persiste filtros en localStorage para sobrevivir recargas
+  useEffect(() => {
+    localStorage.setItem("adm-search",    search);
+    localStorage.setItem("adm-comunidad", filterComunidad);
+    localStorage.setItem("adm-status",    filterStatus);
+    localStorage.setItem("adm-period",    filterPeriod);
+  }, [search, filterComunidad, filterStatus, filterPeriod]);
 
   // Re-fetch de tabla cuando cambian filtros, orden o página
   useEffect(() => {
