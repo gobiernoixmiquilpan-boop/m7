@@ -14,6 +14,7 @@ import {
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
   FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
   ArrowUp, ArrowDown, ZoomIn, Check, Copy, Layers, BarChart2, Clock,
+  Archive, ArchiveRestore,
 } from "lucide-react";
 
 function Eye({ className }: { className?: string }) {
@@ -66,6 +67,7 @@ interface Submission {
   motivoRechazo?: string;
   notas?: string;
   updated_at?: string;
+  archived_at?: string;
 }
 
 const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
@@ -111,20 +113,20 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center">
-        <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Trash2 className="w-7 h-7 text-red-600" strokeWidth={1.5} />
+        <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Archive className="w-7 h-7 text-amber-600" strokeWidth={1.5} />
         </div>
-        <h3 className="font-bold text-gray-800 text-base mb-1">¿Eliminar registro?</h3>
+        <h3 className="font-bold text-gray-800 text-base mb-1">¿Archivar registro?</h3>
         {name && <p className="text-sm font-semibold text-gray-700 mb-1 truncate px-2">{name}</p>}
-        <p className="text-sm text-gray-500 mb-5">Esta acción no se puede deshacer.</p>
+        <p className="text-sm text-gray-500 mb-5">El registro se moverá a archivados y podrá restaurarse.</p>
         <div className="flex gap-3">
           <button onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:border-gray-300 transition-all">
             Cancelar
           </button>
           <button onClick={onConfirm}
-            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all">
-            Eliminar
+            className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm transition-all">
+            Archivar
           </button>
         </div>
       </div>
@@ -395,9 +397,10 @@ function StatCard({ label, value, sub, icon, color = "guinda" }: {
   const bg     = color === "blue" ? "bg-blue-100"    : color === "emerald" ? "bg-emerald-100"    : "bg-guinda-100";
   const text   = color === "blue" ? "text-blue-700"  : color === "emerald" ? "text-emerald-700"  : "text-guinda-700";
   const accent = color === "blue" ? "#3b82f6"        : color === "emerald" ? "#10b981"           : "#6e112c";
+  const gradFrom = color === "blue" ? "rgba(59,130,246,0.04)" : color === "emerald" ? "rgba(16,185,129,0.04)" : "rgba(110,17,44,0.04)";
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100 border-l-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-default"
-      style={{ borderLeftColor: accent }}>
+    <div className="rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100 border-l-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-default"
+      style={{ borderLeftColor: accent, background: `linear-gradient(135deg, #ffffff 60%, ${gradFrom} 100%)` }}>
       <div className={`w-12 h-12 rounded-2xl ${bg} ${text} flex items-center justify-center shrink-0`}>
         {icon}
       </div>
@@ -411,6 +414,10 @@ function StatCard({ label, value, sub, icon, color = "guinda" }: {
 }
 
 /* ──────────────────── Print ──────────────────── */
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function printSubmission(s: Submission) {
   const f = `CAP-2026-${s.id.slice(-6).toUpperCase()}`;
   const fecha = new Date(s.timestamp).toLocaleString("es-MX", {
@@ -419,10 +426,10 @@ function printSubmission(s: Submission) {
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === (s.status ?? "pendiente"))?.label ?? "Pendiente";
 
   const row = (label: string, value: string, mono = false) =>
-    `<tr><td class="label">${label}</td><td class="${mono ? "mono" : ""}">${value}</td></tr>`;
+    `<tr><td class="label">${escHtml(label)}</td><td class="${mono ? "mono" : ""}">${escHtml(value)}</td></tr>`;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>Solicitud ${f} — RegulaTierra</title>
+<title>Solicitud ${escHtml(f)} — RegulaTierra</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:28px}
@@ -451,10 +458,10 @@ function printSubmission(s: Submission) {
   </div>
   <div class="folio-box">
     <div class="folio-lbl">Folio</div>
-    <div class="folio-num">${f}</div>
+    <div class="folio-num">${escHtml(f)}</div>
   </div>
 </div>
-<span class="status">Estado: ${statusLabel}</span>
+<span class="status">Estado: ${escHtml(statusLabel)}</span>
 <h2>Datos del solicitante</h2>
 <table>
   ${row("Nombre completo", s.nombreCompleto)}
@@ -480,8 +487,8 @@ function printSubmission(s: Submission) {
   <div class="sign-box">Sello y firma del funcionario</div>
 </div>
 <div class="footer">
-  <span>Registrado: ${fecha}</span>
-  <span>Folio: ${f}</span>
+  <span>Registrado: ${escHtml(fecha)}</span>
+  <span>Folio: ${escHtml(f)}</span>
 </div>
 <script>window.onload=()=>{window.print()}<\/script>
 </body></html>`;
@@ -495,12 +502,14 @@ function printSubmission(s: Submission) {
 type HistoryEntry = { id: number; status: string; motivo: string | null; created_at: string };
 
 /* ──────────────────── Detail modal ──────────────────── */
-function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
+function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArchivedView, onRestore }: {
   s: Submission;
   onClose: () => void;
   onStatusChange: (id: string, status: string, extras?: { motivoRechazo?: string }) => Promise<void>;
   onSaveNotes: (id: string, notas: string) => Promise<void>;
   onDelete: (id: string) => void;
+  isArchivedView: boolean;
+  onRestore: (id: string) => void;
 }) {
   const [status,        setStatus]       = useState(s.status ?? "pendiente");
   const [saving,        setSaving]       = useState(false);
@@ -510,6 +519,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
   const [motivoRechazo, setMotivoRechazo] = useState(s.motivoRechazo ?? "");
   const [notasLocal,    setNotasLocal]   = useState(s.notas ?? "");
   const [history,       setHistory]      = useState<HistoryEntry[]>([]);
+  const [justChanged,   setJustChanged]  = useState<string | null>(null);
   const notasTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const motivoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -544,6 +554,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
   }
 
   async function changeStatus(v: string) {
+    if (motivoTimer.current) clearTimeout(motivoTimer.current);
     setSaving(true);
     setStatus(v);
     if (v !== "rechazado") setMotivoRechazo("");
@@ -553,6 +564,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
       .then((r) => r.json())
       .then((d: HistoryEntry[]) => setHistory(d))
       .catch(() => {});
+    if (v === "aprobado" || v === "rechazado") setJustChanged(v);
     setSaving(false);
   }
 
@@ -623,6 +635,28 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
                   className="w-full text-sm border border-red-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 bg-red-50/50 resize-none"
                 />
                 <p className="text-[10px] text-gray-400 mt-0.5">Se guarda automáticamente · Visible para el ciudadano</p>
+              </div>
+            )}
+            {justChanged && (
+              <div className="mt-3 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
+                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-emerald-800">Estado actualizado</p>
+                  <p className="text-[10px] text-emerald-600">¿Notificar al ciudadano por WhatsApp?</p>
+                </div>
+                <a
+                  href={`https://wa.me/52${s.celular}?text=${encodeURIComponent(
+                    justChanged === "aprobado"
+                      ? `Estimado/a ${s.nombreCompleto.split(" ")[0]}, su solicitud de regularización de tierras (folio ${folio(s.id)}) fue APROBADA. Favor de acudir a la Contraloría Municipal con su folio para recoger su documentación. — Contraloría Municipal de Ixmiquilpan`
+                      : `Estimado/a ${s.nombreCompleto.split(" ")[0]}, su solicitud de regularización de tierras (folio ${folio(s.id)}) no pudo ser aprobada en esta etapa${motivoRechazo ? `: ${motivoRechazo}` : ""}. Favor de acudir a la ventanilla municipal para más información. — Contraloría Municipal de Ixmiquilpan`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setJustChanged(null)}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+                >
+                  <MessageCircle className="w-3 h-3" strokeWidth={2} /> Notificar
+                </a>
               </div>
             )}
           </div>
@@ -771,14 +805,25 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete }: {
 
         {/* Acciones */}
         <div className="p-5 border-t border-gray-100 shrink-0 space-y-2">
+          <Link href={`/consulta/${folio(s.id)}`} target="_blank" rel="noreferrer"
+            className="w-full flex items-center justify-center gap-2 text-guinda-700 hover:text-guinda-900 hover:bg-guinda-50 border border-guinda-200 hover:border-guinda-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
+            <ExternalLink className="w-4 h-4" strokeWidth={2} /> Ver consulta pública
+          </Link>
           <button onClick={() => printSubmission(s)}
             className="w-full flex items-center justify-center gap-2 text-guinda-700 hover:text-guinda-900 hover:bg-guinda-50 border border-guinda-200 hover:border-guinda-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
             <Printer className="w-4 h-4" strokeWidth={2} /> Imprimir / Guardar PDF
           </button>
-          <button onClick={() => onDelete(s.id)}
-            className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
-            <Trash2 className="w-4 h-4" strokeWidth={2} /> Eliminar registro
-          </button>
+          {isArchivedView ? (
+            <button onClick={() => onRestore(s.id)}
+              className="w-full flex items-center justify-center gap-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
+              <ArchiveRestore className="w-4 h-4" strokeWidth={2} /> Restaurar registro
+            </button>
+          ) : (
+            <button onClick={() => onDelete(s.id)}
+              className="w-full flex items-center justify-center gap-2 text-amber-600 hover:text-amber-800 hover:bg-amber-50 border border-amber-200 hover:border-amber-300 py-2.5 rounded-xl text-sm font-semibold transition-all">
+              <Archive className="w-4 h-4" strokeWidth={2} /> Archivar registro
+            </button>
+          )}
         </div>
 
       </div>
@@ -861,12 +906,13 @@ export default function AdminPage() {
   const [tableData,    setTableData]    = useState<Submission[]>([]);
   const [tableTotal,   setTableTotal]   = useState(0);
   const isFetchingPage = useRef(false);
-  const tableParamsRef = useRef({ page: 1, search: "", filterComunidad: "", filterStatus: "", filterPeriod: "", sortKey: "timestamp" as keyof Submission, sortDir: "desc" as "asc" | "desc" });
+  const tableParamsRef = useRef({ page: 1, search: "", filterComunidad: "", filterStatus: "", filterPeriod: "", sortKey: "timestamp" as keyof Submission, sortDir: "desc" as "asc" | "desc", showArchived: false });
   const tableRef       = useRef<HTMLDivElement>(null);
   const skipPageScroll = useRef(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [draftSearch,  setDraftSearch]  = useState(() => typeof window !== "undefined" ? (localStorage.getItem("adm-search") ?? "") : "");
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showArchived,  setShowArchived] = useState(false);
 
   function handleSearch(v: string) {
     setDraftSearch(v);
@@ -948,16 +994,18 @@ export default function AdminPage() {
   const fetchPage = useCallback(async (
     pg: number,
     s: string, cc: string, cs: string, cp: string,
-    sk: keyof Submission, sd: "asc" | "desc"
+    sk: keyof Submission, sd: "asc" | "desc",
+    archived = false,
   ) => {
     if (isFetchingPage.current) return;
     isFetchingPage.current = true;
     try {
       const params = new URLSearchParams({ page: String(pg), limit: String(PAGE_SIZE), sortKey: sk as string, sortDir: sd });
-      if (s)  params.set("search",    s);
-      if (cc) params.set("comunidad", cc);
-      if (cs) params.set("status",    cs);
-      if (cp) params.set("period",    cp);
+      if (s)        params.set("search",    s);
+      if (cc)       params.set("comunidad", cc);
+      if (cs)       params.set("status",    cs);
+      if (cp)       params.set("period",    cp);
+      if (archived) params.set("archived",  "true");
       const res = await fetch(`/api/submissions?${params}`);
       if (!res.ok) return;
       const body = await res.json().catch(() => null) as { data: Submission[]; total: number } | null;
@@ -993,8 +1041,8 @@ export default function AdminPage() {
 
   // Mantiene una referencia actualizada de los parámetros de tabla
   useEffect(() => {
-    tableParamsRef.current = { page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir };
-  }, [page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir]);
+    tableParamsRef.current = { page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, showArchived };
+  }, [page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, showArchived]);
 
   // Persiste filtros en localStorage para sobrevivir recargas
   useEffect(() => {
@@ -1008,8 +1056,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchPage(page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir);
-  }, [authed, page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, fetchPage]);
+    fetchPage(page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, showArchived);
+  }, [authed, page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, showArchived, fetchPage]);
 
   // Supabase Realtime vía SSE (reemplaza el polling de 5 s)
   useEffect(() => {
@@ -1023,8 +1071,8 @@ export default function AdminPage() {
       es.onmessage = () => {
         if (document.hidden) return;
         fetchData();
-        const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd } = tableParamsRef.current;
-        fetchPage(pg, s, cc, cs, cp, sk, sd);
+        const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd, showArchived: sa } = tableParamsRef.current;
+        fetchPage(pg, s, cc, cs, cp, sk, sd, sa);
       };
       es.onerror = () => {
         es.close();
@@ -1038,8 +1086,8 @@ export default function AdminPage() {
     const onVisible = () => {
       if (document.hidden) return;
       fetchData();
-      const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd } = tableParamsRef.current;
-      fetchPage(pg, s, cc, cs, cp, sk, sd);
+      const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd, showArchived: sa } = tableParamsRef.current;
+      fetchPage(pg, s, cc, cs, cp, sk, sd, sa);
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
@@ -1113,9 +1161,22 @@ export default function AdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    if (!res.ok) { showToast("No se pudo eliminar. Intente de nuevo.", false); return; }
-    showToast("Registro eliminado correctamente.");
+    if (!res.ok) { showToast("No se pudo archivar. Intente de nuevo.", false); return; }
+    showToast("Registro archivado.");
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
+    setTableData((prev) => prev.filter((s) => s.id !== id));
+    setTableTotal((prev) => Math.max(0, prev - 1));
+    if (selected?.id === id) setSelected(null);
+  }
+
+  async function restoreRow(id: string) {
+    const res = await fetch("/api/submissions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, restore: true }),
+    });
+    if (!res.ok) { showToast("No se pudo restaurar. Intente de nuevo.", false); return; }
+    showToast("Registro restaurado.");
     setTableData((prev) => prev.filter((s) => s.id !== id));
     setTableTotal((prev) => Math.max(0, prev - 1));
     if (selected?.id === id) setSelected(null);
@@ -1232,6 +1293,7 @@ export default function AdminPage() {
           s.nombreCompleto.toLowerCase().includes(q) ||
           s.comunidad.toLowerCase().includes(q) ||
           s.curp.toLowerCase().includes(q) ||
+          s.celular.toLowerCase().includes(q) ||
           folio(s.id).toLowerCase().includes(q)
         );
       })
@@ -1269,6 +1331,24 @@ export default function AdminPage() {
   const pieTierra   = [{ name: "Riego", value: riego }, { name: "Temporal", value: temporal }];
   const pieDialecto = [{ name: "Habla", value: dialecto }, { name: "No habla", value: total - dialecto }];
 
+  const byDay = useMemo(() => {
+    const now = new Date();
+    const map = new Map<string, number>();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      map.set(d.toISOString().slice(0, 10), 0);
+    }
+    submissions.forEach((s) => {
+      const key = s.timestamp.slice(0, 10);
+      if (map.has(key)) map.set(key, (map.get(key) ?? 0) + 1);
+    });
+    return [...map.entries()].map(([iso, solicitudes]) => ({
+      date: new Date(iso + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
+      solicitudes,
+    }));
+  }, [submissions]);
+
   const totalPages = Math.max(1, Math.ceil(tableTotal / PAGE_SIZE));
 
   if (checkingAuth) {
@@ -1284,7 +1364,8 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
 
       {/* Header */}
-      <header className="bg-guinda-800 text-white px-5 py-4 flex items-center gap-3">
+      <header className="text-white px-5 py-4 flex items-center gap-3"
+        style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 70%,#8b1438 100%)" }}>
         <Link href="/"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
           <ChevronLeft className="w-5 h-5" strokeWidth={2} />
@@ -1449,6 +1530,23 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-gray-800">Registros por día</h2>
+                  <span className="text-[10px] text-gray-400">Últimos 30 días</span>
+                </div>
+                {byDay.some((d) => d.solicitudes > 0) ? (
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={byDay} barSize={10}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6b7280" }} axisLine={false} tickLine={false} interval={4} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                      <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #f3f4f6", fontSize: 12 }} cursor={{ fill: "#fdf1f4" }} />
+                      <Bar dataKey="solicitudes" fill={G} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <p className="text-gray-400 text-sm text-center py-10">Sin datos aún</p>}
+              </div>
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className="font-bold text-gray-800">Solicitudes por comunidad</h2>
                   <span className="text-[10px] text-gray-400">Toca una barra para filtrar</span>
                 </div>
@@ -1533,7 +1631,7 @@ export default function AdminPage() {
               <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-100">
                 <div className="relative flex-1 min-w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
-                  <input ref={searchInputRef} type="text" placeholder="Buscar por nombre, CURP o folio… ( / )"
+                  <input ref={searchInputRef} type="text" placeholder="Nombre, CURP, celular o folio… ( / )"
                     value={draftSearch}
                     onChange={(e) => handleSearch(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Escape") { handleSearch(""); e.currentTarget.blur(); } }}
@@ -1576,6 +1674,12 @@ export default function AdminPage() {
                     <X className="w-3.5 h-3.5" strokeWidth={2} /> Limpiar
                   </button>
                 )}
+                <button
+                  onClick={() => { setShowArchived((v) => !v); setPage(1); setSelectedIds(new Set()); skipPageScroll.current = true; }}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-xl border transition-all shrink-0 ${showArchived ? "bg-amber-100 text-amber-700 border-amber-300" : "bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300"}`}>
+                  <Archive className="w-3.5 h-3.5" strokeWidth={2} />
+                  {showArchived ? "Ver activos" : "Archivados"}
+                </button>
                 <span className="text-xs text-gray-400 shrink-0">
                   {tableTotal} registro{tableTotal !== 1 ? "s" : ""}
                 </span>
@@ -1611,6 +1715,7 @@ export default function AdminPage() {
                         <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3 whitespace-nowrap">Folio</th>
                         {([
                           ["Nombre",    "nombreCompleto"],
+                          ["Celular",   "celular"],
                           ["Comunidad", "comunidad"],
                           ["Lote",      "lote"],
                           ["Tipo",      "tipoTierra"],
@@ -1662,6 +1767,9 @@ export default function AdminPage() {
                               </div>
                               <span className="font-medium text-gray-800">{s.nombreCompleto}</span>
                             </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">
+                            {s.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
                           </td>
                           <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{s.comunidad}</td>
                           <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">{s.lote || "—"}</td>
@@ -1730,6 +1838,8 @@ export default function AdminPage() {
           onStatusChange={updateStatus}
           onSaveNotes={saveNotes}
           onDelete={(id) => setDeleteConfirmId(id)}
+          isArchivedView={showArchived}
+          onRestore={restoreRow}
         />
       )}
 

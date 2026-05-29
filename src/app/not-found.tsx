@@ -15,8 +15,9 @@ export default function NotFound() {
           </span>
         </div>
 
-        <div className="w-20 h-20 bg-guinda-100 rounded-full flex items-center justify-center mx-auto mb-5">
-          <span className="text-3xl font-black text-guinda-400">404</span>
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
+          style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
+          <span className="text-3xl font-black text-white/70">404</span>
         </div>
 
         <h2 className="text-xl font-bold text-gray-800 mb-2">Página no encontrada</h2>

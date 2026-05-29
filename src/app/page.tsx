@@ -124,7 +124,8 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!f.lote.trim())      e.lote      = "Selecciona tu lote en el mapa";
     if (!f.tipoTierra)       e.tipoTierra = "Seleccione una opción";
     const sup = parseFloat(f.superficie);
-    if (!f.superficie.trim() || isNaN(sup) || sup <= 0) e.superficie = "Debe ser mayor a 0";
+    if (!f.superficie.trim() || isNaN(sup) || sup < 0.01 || sup > 500)
+      e.superficie = "Debe ser entre 0.01 y 500 ha";
   }
   if (step === 7 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
   return e;
@@ -185,6 +186,8 @@ export default function Home() {
   const geoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showSaved,   setShowSaved]   = useState(false);
   const [offline,     setOffline]     = useState(false);
+  const [consented,   setConsented]   = useState(false);
+  const [showLoteList, setShowLoteList] = useState(false);
 
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -447,7 +450,7 @@ export default function Home() {
   }
 
   function reset() {
-    setSubmitted(false); setSubmittedId(""); setSubmittedOffline(false); setSubmittedOfflineId(""); setStep(1);
+    setSubmitted(false); setSubmittedId(""); setSubmittedOffline(false); setSubmittedOfflineId(""); setStep(0);
     setForm(emptyForm);
     setDetectedLote(null);
     setPreviews((p) => {
@@ -492,7 +495,7 @@ export default function Home() {
           setGeoError("Tiempo de espera agotado. Escríbela manualmente.");
         }
       },
-      { timeout: 25000, enableHighAccuracy: false }
+      { timeout: 35000, enableHighAccuracy: true }
     );
   }
 
@@ -518,7 +521,7 @@ export default function Home() {
             Sin conexión — se enviará <strong>automáticamente</strong> al recuperar señal.
           </p>
           {offlineFolio && (
-            <div className="mt-4 bg-guinda-800 rounded-2xl px-6 py-4">
+            <div className="mt-4 rounded-2xl px-6 py-4" style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
               <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1">Folio provisional</p>
               <p className="text-white text-2xl font-bold font-mono tracking-wider">{offlineFolio}</p>
               <p className="text-guinda-300 text-[10px] mt-1">Guarda este número para consultar tu estado</p>
@@ -579,7 +582,7 @@ export default function Home() {
           <p className="text-gray-600 text-sm mt-2">
             Gracias, <strong className="text-guinda-700">{form.nombreCompleto}</strong>.
           </p>
-          <div className="mt-4 bg-guinda-800 rounded-2xl px-6 py-4">
+          <div className="mt-4 rounded-2xl px-6 py-4" style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
             <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1">Folio de registro</p>
             <p className="text-white text-2xl font-bold font-mono tracking-wider">{folioNum}</p>
             <p className="text-guinda-300 text-[10px] mt-1">Guarda este número como comprobante</p>
@@ -635,8 +638,11 @@ export default function Home() {
   if (step === 0) {
     return (
       <main className="min-h-screen bg-[#f8f7f8] flex flex-col">
-        <div className="bg-guinda-800 rounded-b-[2.5rem] shadow-lg px-5 pt-12 pb-10">
-          <div className="max-w-sm mx-auto flex flex-col items-center text-center">
+        <div className="rounded-b-[2.5rem] shadow-xl px-5 pt-12 pb-10 relative overflow-hidden"
+          style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
+          <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
+          <div className="max-w-sm mx-auto flex flex-col items-center text-center relative">
             <div className="w-20 h-20 rounded-3xl bg-white/15 flex items-center justify-center mb-5 overflow-hidden">
               <Image src="/logo.svg" alt="RegulaTierra" width={52} height={52} priority />
             </div>
@@ -734,8 +740,11 @@ export default function Home() {
     <div className="min-h-screen bg-[#f8f7f8] pb-44">
 
       {/* ── Header ── */}
-      <header className="bg-guinda-800 rounded-b-[2rem] shadow-lg">
-        <div className="max-w-2xl mx-auto px-5 pt-6 pb-5">
+      <header className="rounded-b-[2rem] shadow-xl relative overflow-hidden"
+        style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
+        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle,rgba(255,255,255,0.06) 0%,transparent 70%)" }} />
+        <div className="max-w-2xl mx-auto px-5 pt-6 pb-5 relative">
           <div className="flex items-center gap-3 mb-5">
             <button onClick={() => { stepDir.current = "back"; setStep(0); }}
               className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center shrink-0 transition-colors"
@@ -764,7 +773,7 @@ export default function Home() {
           </div>
 
           <p className="text-[11px] text-guinda-400 font-semibold uppercase tracking-widest mb-0.5">
-            Paso {step} de {TOTAL_STEPS}
+            Paso {step} de {TOTAL_STEPS} · {Math.round((step / TOTAL_STEPS) * 100)}% completado
           </p>
           <h1 className="text-xl font-bold text-white mb-4">{STEP_TITLES[step - 1]}</h1>
 
@@ -776,8 +785,8 @@ export default function Home() {
                 <button key={i} type="button"
                   onClick={() => { if (done) { setErrors({}); stepDir.current = "back"; setStep(i + 1); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
                   title={done ? `Volver al paso ${i + 1}` : undefined}
-                  className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
-                    current ? "bg-white" : done ? "bg-white/70 hover:bg-white cursor-pointer" : "bg-white/20 cursor-default"
+                  className={`flex-1 rounded-full transition-all duration-500 ${
+                    current ? "h-2.5 bg-white step-active-glow" : done ? "h-1.5 bg-white/70 hover:bg-white cursor-pointer" : "h-1.5 bg-white/20 cursor-default"
                   }`}
                 />
               );
@@ -818,6 +827,15 @@ export default function Home() {
               <p className="text-xs text-guinda-800 leading-relaxed">
                 Todos los campos son obligatorios. La información es confidencial y de uso exclusivo del municipio.
               </p>
+            </div>
+            <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5">
+              <Camera className="w-4 h-4 text-blue-500 shrink-0 mt-px" strokeWidth={2} />
+              <div className="text-xs text-blue-800 leading-relaxed">
+                <p className="font-semibold mb-1.5">Consejos para la foto</p>
+                <p className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0" />Fotografía toda la fachada de la casa</p>
+                <p className="flex items-center gap-1.5 mt-0.5"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0" />Buena iluminación, evita el contraluz</p>
+                <p className="flex items-center gap-1.5 mt-0.5"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0" />Foto nítida, sin filtros ni edición</p>
+              </div>
             </div>
             <input id="foto-casa-cam" type="file" accept="image/*" capture="environment" className="hidden"
               onChange={(e) => e.target.files?.[0] && handleFile("fotoCasa", e.target.files[0])} />
@@ -874,7 +892,7 @@ export default function Home() {
                   ? <Loader2 className="w-4 h-4 animate-spin shrink-0" strokeWidth={2} />
                   : <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} />}
                 {geoLoading
-                  ? <span>Buscando señal… <span className="font-mono">{geoSeconds}s</span>{geoSeconds >= 8 ? " — puede tardar en interiores" : ""}</span>
+                  ? <span>Activando GPS… <span className="font-mono">{geoSeconds}s</span>{geoSeconds >= 12 ? " — puede tardar en interiores" : ""}</span>
                   : form.lat ? "Ubicación obtenida ✓" : "Usar mi ubicación actual"}
               </button>
               {geoError && <FieldError msg={geoError} />}
@@ -892,7 +910,7 @@ export default function Home() {
           <Card title="Nombre completo" hasError={!!errors.nombreCompleto}>
             <p className="text-xs text-gray-400 mb-3">Escríbelo tal como aparece en tu INE, empezando por apellidos.</p>
             <TextInput placeholder="Ej: García López María" value={form.nombreCompleto}
-              onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v }))} error={errors.nombreCompleto}
+              onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v.replace(/ {2,}/g, " ") }))} error={errors.nombreCompleto}
               autoCapitalize="words" autoCorrect="off" spellCheck={false} />
           </Card>
         )}
@@ -925,6 +943,7 @@ export default function Home() {
           <>
             <Card title="Número de celular" hasError={!!errors.celular}>
               <TextInput placeholder="10 dígitos sin espacios" value={form.celular} inputMode="numeric"
+                autoComplete="tel"
                 onChange={(v) => setForm((p) => ({ ...p, celular: v.replace(/\D/g, "").slice(0, 10) }))}
                 error={errors.celular} />
               {form.celular.length === 10 && !errors.celular && (
@@ -935,7 +954,7 @@ export default function Home() {
             </Card>
             <Card title="CURP" hasError={!!errors.curp}>
               <TextInput placeholder="Ej: GOML900101HDFMRR09" value={form.curp}
-                onChange={(v) => setForm((p) => ({ ...p, curp: v.toUpperCase().slice(0, 18) }))}
+                onChange={(v) => setForm((p) => ({ ...p, curp: v.replace(/\s/g, "").toUpperCase().slice(0, 18) }))}
                 error={errors.curp} autoCapitalize="characters" autoCorrect="off" spellCheck={false} />
               <div className="mt-2.5 flex items-center gap-2">
                 <div className="flex-1 flex gap-0.5">
@@ -947,6 +966,11 @@ export default function Home() {
                   {form.curp.length}/18
                 </span>
               </div>
+              {/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(form.curp) && !errors.curp && (
+                <p className="text-xs text-guinda-600 mt-1.5 font-medium flex items-center gap-1">
+                  <Check className="w-3 h-3" strokeWidth={2.5} /> CURP válida
+                </p>
+              )}
               <a href="https://www.gob.mx/curp/" target="_blank" rel="noreferrer"
                 className="mt-3 inline-flex items-center gap-1.5 text-xs text-guinda-600 hover:text-guinda-800 font-medium">
                 <ExternalLink className="w-3 h-3" strokeWidth={2} />
@@ -1039,6 +1063,49 @@ export default function Home() {
                 </div>
               );
             })()}
+
+            {/* Fallback selección por lista */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowLoteList((v) => !v)}
+                className="text-xs text-guinda-600 hover:text-guinda-800 font-medium underline underline-offset-2 transition-colors"
+              >
+                {showLoteList ? "Ocultar lista de lotes" : "¿El mapa no carga? Selecciona de la lista"}
+              </button>
+            </div>
+            {showLoteList && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
+                  <p className="text-sm font-semibold text-gray-700">Seleccionar lote de la lista</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Usa el mapa de arriba si puedes — es más preciso</p>
+                </div>
+                <div className="px-5 py-4">
+                  <div className="relative">
+                    <select
+                      value={form.lote}
+                      onChange={(e) => {
+                        const found = LOTES.find((l) => l.loteNum === e.target.value);
+                        if (found) {
+                          setForm((p) => ({ ...p, lote: found.loteNum, predio: found.predioNum }));
+                          setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
+                        }
+                      }}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent appearance-none bg-gray-50/50 text-gray-800"
+                    >
+                      <option value="">Elige tu lote…</option>
+                      {LOTES.filter((l) => l.loteNum).map((l) => (
+                        <option key={l.id} value={l.loteNum}>
+                          Lote {l.loteNum} — Predio {l.predioNum}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute inset-y-0 right-3 my-auto w-4 h-4 text-gray-400" strokeWidth={2} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Card title="Tipo de tierra" hasError={!!errors.tipoTierra}>
               <RadioGroup
                 options={[
@@ -1096,7 +1163,7 @@ export default function Home() {
               <div className="px-5 divide-y divide-gray-100">
                 <ReviewRow label="Nombre" value={form.nombreCompleto} />
                 <ReviewRow label="CURP" value={form.curp} mono />
-                <ReviewRow label="Celular" value={form.celular} />
+                <ReviewRow label="Celular" value={form.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")} />
                 <ReviewRow label="Comunidad" value={form.comunidad} />
                 <ReviewRow label="Habla ñhañhu" value={form.hablaDialecto === "si" ? "Sí" : "No"} />
               </div>
@@ -1152,6 +1219,22 @@ export default function Home() {
                 })}
               </div>
             </div>
+
+            <label htmlFor="consent-check"
+              className={`flex items-start gap-3 rounded-2xl border-2 px-4 py-3.5 cursor-pointer transition-colors ${
+                consented ? "border-guinda-300 bg-guinda-50" : "border-gray-200 bg-gray-50/60"
+              }`}>
+              <input
+                type="checkbox"
+                id="consent-check"
+                checked={consented}
+                onChange={(e) => setConsented(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-guinda-700 cursor-pointer shrink-0"
+              />
+              <span className="text-xs text-gray-700 leading-relaxed">
+                Confirmo que los datos proporcionados son <strong className="text-gray-800">correctos y verídicos</strong>. Entiendo que proporcionar información falsa puede resultar en el rechazo de mi solicitud.
+              </span>
+            </label>
           </>
         )}
       </div>
@@ -1188,12 +1271,17 @@ export default function Home() {
               {compressing ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Procesando foto…</> : "Siguiente →"}
             </button>
           ) : (
-            <button type="button" onClick={submit} disabled={loading || compressing}
-              className="flex-1 bg-guinda-700 hover:bg-guinda-800 disabled:opacity-70 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
-              {loading
-                ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Enviando…</>
-                : "Enviar solicitud"}
-            </button>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <button type="button" onClick={submit} disabled={loading || compressing || !consented}
+                className="w-full bg-guinda-700 hover:bg-guinda-800 disabled:opacity-50 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+                {loading
+                  ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Enviando…</>
+                  : "Enviar solicitud"}
+              </button>
+              {!consented && (
+                <p className="text-[10px] text-gray-400 text-center">Confirma los datos para habilitar el envío</p>
+              )}
+            </div>
           )}
         </div>
         <div className="flex items-center justify-center gap-3 mt-2">
@@ -1230,17 +1318,17 @@ function FieldError({ msg }: { msg: string }) {
   );
 }
 
-function TextInput({ placeholder, value, onChange, error, inputMode, suffix, autoCapitalize, autoCorrect, spellCheck }: {
+function TextInput({ placeholder, value, onChange, error, inputMode, suffix, autoCapitalize, autoCorrect, spellCheck, autoComplete }: {
   placeholder: string; value: string; onChange: (v: string) => void;
   error?: string; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]; suffix?: string;
-  autoCapitalize?: string; autoCorrect?: string; spellCheck?: boolean;
+  autoCapitalize?: string; autoCorrect?: string; spellCheck?: boolean; autoComplete?: string;
 }) {
   return (
     <>
       <div className="relative">
         <input type="text" inputMode={inputMode} placeholder={placeholder} value={value}
           onChange={(e) => onChange(e.target.value)}
-          autoCapitalize={autoCapitalize} autoCorrect={autoCorrect} spellCheck={spellCheck}
+          autoCapitalize={autoCapitalize} autoCorrect={autoCorrect} spellCheck={spellCheck} autoComplete={autoComplete}
           className={`w-full border rounded-xl px-4 py-3 text-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent transition-all placeholder:text-gray-400 ${suffix ? "pr-12" : ""} ${error ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50/50 focus:bg-white"}`}
         />
         {suffix && (

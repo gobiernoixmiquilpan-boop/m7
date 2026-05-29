@@ -102,7 +102,7 @@ export default async function ConsultaFolioPage({
 
   return (
     <main className="min-h-screen bg-guinda-50 flex flex-col print:bg-white print:min-h-0">
-      <header className="bg-guinda-800 rounded-b-[2rem] shadow-lg print:hidden">
+      <header className="rounded-b-[2rem] shadow-xl print:hidden" style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
         <div className="max-w-sm mx-auto px-5 pt-6 pb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">

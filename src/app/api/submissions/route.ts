@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { withAdminAuth } from "@/lib/auth";
+import { checkAndIncrement } from "@/lib/rateLimit";
 
 const COMUNIDADES_VALIDAS = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
 
@@ -10,6 +11,7 @@ function validatePost(fd: FormData): string | null {
   const ubicacion      = (fd.get("ubicacion")      as string | null)?.trim() ?? "";
   const celular        = (fd.get("celular")        as string | null) ?? "";
   const curp           = (fd.get("curp")           as string | null)?.trim() ?? "";
+  const predio         = (fd.get("predio")         as string | null)?.trim() ?? "";
   const lote           = (fd.get("lote")           as string | null)?.trim() ?? "";
   const tipoTierra     = (fd.get("tipoTierra")     as string | null) ?? "";
   const superficie     = (fd.get("superficie")     as string | null) ?? "";
@@ -20,9 +22,11 @@ function validatePost(fd: FormData): string | null {
   if (!ubicacion)                                          return "ubicacion requerida";
   if (!/^\d{10}$/.test(celular))                          return "celular inválido (10 dígitos)";
   if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(curp)) return "CURP inválida";
+  if (!predio)                                             return "predio requerido";
   if (!lote)                                               return "lote requerido";
   if (!["riego", "temporal"].includes(tipoTierra))         return "tipoTierra inválido";
-  if (!superficie || isNaN(parseFloat(superficie)) || parseFloat(superficie) <= 0) return "superficie inválida";
+  const supVal = parseFloat(superficie);
+  if (!superficie || isNaN(supVal) || supVal < 0.01 || supVal > 500) return "superficie inválida (debe ser entre 0.01 y 500 ha)";
   if (!["si", "no"].includes(hablaDialecto))               return "hablaDialecto inválido";
   return null;
 }
@@ -30,29 +34,16 @@ function validatePost(fd: FormData): string | null {
 const VALID_SORT_KEYS = ["timestamp", "nombreCompleto", "comunidad", "status", "superficie", "tipoTierra"] as const;
 type SortKey = typeof VALID_SORT_KEYS[number];
 
-// Rate limiting para POST (ciudadanos): 3 envíos por IP por hora
-const postAttempts = new Map<string, { count: number; resetAt: number }>();
-const POST_LIMIT   = 3;
-const POST_WINDOW  = 60 * 60 * 1000;
+const POST_LIMIT  = 3;
+const POST_WINDOW = 60 * 60 * 1000;
 
 function getIp(req: NextRequest): string {
   return (
+    req.headers.get("x-vercel-forwarded-for") ??
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
     "unknown"
   );
-}
-
-function checkPostRateLimit(ip: string): boolean {
-  const now   = Date.now();
-  const entry = postAttempts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    postAttempts.set(ip, { count: 1, resetAt: now + POST_WINDOW });
-    return true;
-  }
-  if (entry.count >= POST_LIMIT) return false;
-  entry.count += 1;
-  return true;
 }
 
 export async function GET(req: NextRequest) {
@@ -70,12 +61,14 @@ export async function GET(req: NextRequest) {
       : "timestamp";
     const ascending  = p.get("sortDir") === "asc";
 
+    const showArchived = p.get("archived") === "true";
     let query = supabase.from("submissions").select("*", { count: "exact" });
+    if (!showArchived) query = query.is("archived_at", null);
 
     if (search) {
       const safe = search.replace(/[%_]/g, "\\$&");
       query = query.or(
-        `"nombreCompleto".ilike.%${safe}%,comunidad.ilike.%${safe}%,curp.ilike.%${safe}%,id.ilike.%${safe}%`
+        `"nombreCompleto".ilike.%${safe}%,comunidad.ilike.%${safe}%,curp.ilike.%${safe}%,id.ilike.%${safe}%,celular.ilike.%${safe}%`
       );
     }
     if (comunidad) query = query.eq("comunidad", comunidad);
@@ -118,7 +111,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const ip = getIp(req);
-  if (!checkPostRateLimit(ip)) {
+  if (!(await checkAndIncrement(`post:${ip}`, POST_LIMIT, POST_WINDOW))) {
     return NextResponse.json(
       { error: "Demasiados envíos. Intenta de nuevo en una hora." },
       { status: 429 }
@@ -225,10 +218,16 @@ const VALID_STATUSES = ["pendiente", "revision", "aprobado", "rechazado"] as con
 
 export async function PATCH(req: NextRequest) {
   return withAdminAuth(req, async () => {
-    let body: { id?: string; status?: string; motivoRechazo?: string; notas?: string };
+    let body: { id?: string; status?: string; motivoRechazo?: string; notas?: string; restore?: boolean };
     try { body = await req.json(); } catch { return NextResponse.json({ error: "JSON inválido" }, { status: 400 }); }
-    const { id, status, motivoRechazo, notas } = body;
+    const { id, status, motivoRechazo, notas, restore } = body;
     if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
+
+    if (restore === true) {
+      const { error } = await supabase.from("submissions").update({ archived_at: null }).eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ ok: true });
+    }
 
     const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
@@ -264,11 +263,10 @@ export async function DELETE(req: NextRequest) {
     try { body = await req.json(); } catch { return NextResponse.json({ error: "JSON inválido" }, { status: 400 }); }
     const { id } = body;
     if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
-    const { data: files } = await supabase.storage.from("solicitudes").list(id);
-    if (files && files.length > 0) {
-      await supabase.storage.from("solicitudes").remove(files.map((f) => `${id}/${f.name}`));
-    }
-    const { error } = await supabase.from("submissions").delete().eq("id", id);
+    const { error } = await supabase
+      .from("submissions")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   });

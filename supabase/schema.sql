@@ -59,6 +59,32 @@ create index if not exists idx_submissions_timestamp on submissions(timestamp de
 create index if not exists idx_submissions_comunidad on submissions(comunidad);
 create index if not exists idx_status_history_sub    on status_history(submission_id);
 
+-- ─── MIGRACIÓN v4 (soft delete + índice reset_at para limpieza) ─────────────
+
+alter table submissions
+  add column if not exists archived_at timestamptz;
+
+-- Índice parcial: acelera el filtro "archived_at IS NULL" (vista activa)
+create index if not exists idx_submissions_active on submissions(timestamp desc)
+  where archived_at is null;
+
+-- Índice en reset_at para limpieza eficiente de rate_limits
+create index if not exists idx_rate_limits_expiry on rate_limits(reset_at);
+
+-- ─── MIGRACIÓN v3 (rate limiting persistente para entornos serverless) ────────
+
+create table if not exists rate_limits (
+  key        text primary key,
+  count      int  not null default 0,
+  reset_at   timestamptz not null
+);
+
+alter table rate_limits enable row level security;
+-- Sin políticas: service_role (servidor) bypasea RLS; clientes anónimos no pueden leer ni escribir.
+
+-- Limpieza periódica de entradas expiradas (ejecutar manualmente si crece la tabla):
+-- delete from rate_limits where reset_at < now();
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ADMIN_PASSWORD_HASH: genera el hash con:
 --   Linux/macOS: echo -n "tu-contraseña" | sha256sum
