@@ -231,15 +231,19 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
           )}
 
           <button onClick={onLogin} disabled={loading || blocked}
-            className="w-full text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60 active:scale-[.98]"
-            style={{ background: loading || blocked ? undefined : "linear-gradient(135deg,#6e112c,#9e1c42)" }}>
+            className="w-full text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60 active:scale-[.98] shadow-lg shadow-guinda-900/30 mt-1"
+            style={{ background: loading || blocked ? "#9ca3af" : "linear-gradient(135deg,#530d21 0%,#8b1438 50%,#6e112c 100%)" }}>
             {loading
               ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Ingresando…</>
               : "Ingresar al panel"}
           </button>
         </div>
 
-        <p className="text-center text-white/25 text-xs mt-6">Contraloría Municipal · Ixmiquilpan</p>
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <div className="h-px flex-1 bg-white/10" />
+          <p className="text-white/30 text-[11px] font-medium shrink-0">Contraloría Municipal · Ixmiquilpan</p>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
       </div>
     </main>
   );
@@ -605,7 +609,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
           ); })()}
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm leading-none truncate">{s.nombreCompleto}</p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               <p className="text-white/50 text-[11px] font-mono">{folio(s.id)}</p>
               <button
                 onClick={async () => {
@@ -617,11 +621,15 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
                 title="Copiar folio">
                 {copied ? <Check className="w-3 h-3 text-emerald-300" strokeWidth={2.5} /> : <Copy className="w-3 h-3" strokeWidth={2} />}
               </button>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
-                {statusLabel(s.status)}
-              </span>
+              <span className="text-white/30 text-[10px]">·</span>
+              <span className="text-white/50 text-[11px]">{s.comunidad}</span>
+              <span className="text-white/30 text-[10px]">·</span>
+              <span className="text-white/50 text-[11px]">{s.superficie} ha</span>
             </div>
           </div>
+          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${statusCls(s.status)}`}>
+            {statusLabel(s.status)}
+          </span>
           {saving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />}
         </div>
 
@@ -661,50 +669,66 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
               </div>
             )}
             {justChanged && (
-              <div className="mt-3 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
-                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-emerald-800">Estado actualizado</p>
-                  <p className="text-[10px] text-emerald-600">¿Notificar al ciudadano por WhatsApp?</p>
+              <div className="mt-3 rounded-2xl overflow-hidden shadow-sm"
+                style={{ background: "linear-gradient(135deg,#064e3b 0%,#065f46 100%)" }}>
+                <div className="px-4 py-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                    <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-white">
+                      {justChanged === "aprobado" ? "¡Solicitud aprobada!" : "Solicitud rechazada"}
+                    </p>
+                    <p className="text-[11px] text-emerald-200 mt-0.5">Notifica al ciudadano por WhatsApp</p>
+                  </div>
+                  <a
+                    href={`https://wa.me/52${s.celular}?text=${encodeURIComponent(
+                      justChanged === "aprobado"
+                        ? `Estimado/a ${s.nombreCompleto.split(" ")[0]}, su solicitud de regularización de tierras (folio ${folio(s.id)}) fue APROBADA. Favor de acudir a la Contraloría Municipal con su folio para recoger su documentación. — Contraloría Municipal de Ixmiquilpan`
+                        : `Estimado/a ${s.nombreCompleto.split(" ")[0]}, su solicitud de regularización de tierras (folio ${folio(s.id)}) no pudo ser aprobada en esta etapa${motivoRechazo ? `: ${motivoRechazo}` : ""}. Favor de acudir a la ventanilla municipal para más información. — Contraloría Municipal de Ixmiquilpan`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setJustChanged(null)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-50 px-3 py-2 rounded-xl transition-colors shrink-0 shadow-sm"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" strokeWidth={2.5} /> Enviar
+                  </a>
                 </div>
-                <a
-                  href={`https://wa.me/52${s.celular}?text=${encodeURIComponent(
-                    justChanged === "aprobado"
-                      ? `Estimado/a ${s.nombreCompleto.split(" ")[0]}, su solicitud de regularización de tierras (folio ${folio(s.id)}) fue APROBADA. Favor de acudir a la Contraloría Municipal con su folio para recoger su documentación. — Contraloría Municipal de Ixmiquilpan`
-                      : `Estimado/a ${s.nombreCompleto.split(" ")[0]}, su solicitud de regularización de tierras (folio ${folio(s.id)}) no pudo ser aprobada en esta etapa${motivoRechazo ? `: ${motivoRechazo}` : ""}. Favor de acudir a la ventanilla municipal para más información. — Contraloría Municipal de Ixmiquilpan`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => setJustChanged(null)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg transition-colors shrink-0"
-                >
-                  <MessageCircle className="w-3 h-3" strokeWidth={2} /> Notificar
-                </a>
               </div>
             )}
           </div>
 
           {/* Fotos */}
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Fotografías</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fotografías</p>
+              <span className="text-[10px] text-gray-300">{photos.filter(p => p.path).length}/{photos.length} subidas</span>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               {photos.map(({ path, label }) => {
                 const src = photoSrc(path);
                 return (
-                  <div key={label} className="space-y-1">
-                    <p className="text-[10px] text-gray-400 font-medium text-center truncate">{label}</p>
+                  <div key={label}>
                     {src ? (
                       <button onClick={() => setLightbox(src)} className="block w-full group">
-                        <div className="relative h-24 rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                          <Image src={src} alt={label} fill className="object-cover group-hover:scale-105 transition-transform duration-200" unoptimized />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
+                        <div className="relative h-28 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm">
+                          <Image src={src} alt={label} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end pb-2">
+                            <ZoomIn className="w-4 h-4 text-white" strokeWidth={2} />
                           </div>
                         </div>
+                        <p className="text-[10px] text-gray-500 font-medium text-center mt-1 truncate px-1">{label}</p>
                       </button>
                     ) : (
-                      <div className="h-24 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
-                        <p className="text-[10px] text-gray-300 text-center px-1">Sin foto</p>
+                      <div>
+                        <div className="h-28 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center bg-gray-50/60 gap-1">
+                          <div className="w-7 h-7 rounded-xl bg-gray-100 flex items-center justify-center">
+                            <ZoomIn className="w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
+                          </div>
+                          <p className="text-[9px] text-gray-300 font-medium">Sin foto</p>
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-medium text-center mt-1 truncate px-1">{label}</p>
                       </div>
                     )}
                   </div>
@@ -715,12 +739,22 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
 
           {/* Datos del predio */}
           <InfoSection title="Datos del predio">
-            <InfoRow label="Comunidad"    value={s.comunidad} />
-            <InfoRow label="Predio"       value={s.predio} />
-            <InfoRow label="Lote"         value={s.lote} />
-            <InfoRow label="Tipo"         value={s.tipoTierra === "riego" ? "Riego" : "Temporal"} />
-            <InfoRow label="Superficie"   value={`${s.superficie} ha`} />
-            <InfoRow label="Habla ñhañhu" value={s.hablaDialecto === "si" ? "Sí" : "No"} />
+            <InfoRow label="Comunidad"  value={s.comunidad} />
+            <InfoRow label="Predio"     value={s.predio} />
+            <InfoRow label="Lote"       value={s.lote} mono />
+            <InfoRow label="Superficie" value={`${s.superficie} ha`} />
+            <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0 gap-3">
+              <span className="text-xs text-gray-400 font-medium shrink-0">Tipo</span>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${s.tipoTierra === "riego" ? "bg-blue-50 text-blue-700" : "bg-sky-50 text-sky-700"}`}>
+                {s.tipoTierra === "riego" ? "Riego" : "Temporal"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0 gap-3">
+              <span className="text-xs text-gray-400 font-medium shrink-0">Habla ñhañhu</span>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${s.hablaDialecto === "si" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                {s.hablaDialecto === "si" ? "Sí" : "No"}
+              </span>
+            </div>
           </InfoSection>
 
           {/* Datos personales */}
@@ -1833,7 +1867,7 @@ export default function AdminPage() {
                             }}
                           />
                         </th>
-                        <th className="text-left text-[11px] font-bold text-gray-400 px-4 py-3.5 whitespace-nowrap uppercase tracking-wider">Folio</th>
+                        <th className="text-left text-[11px] font-bold text-gray-400 px-3 py-3.5 whitespace-nowrap uppercase tracking-wider">ID</th>
                         {([
                           ["Nombre",    "nombreCompleto"],
                           ["Celular",   "celular"],
@@ -1880,7 +1914,11 @@ export default function AdminPage() {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-3.5 text-xs font-mono text-gray-300">{folio(s.id)}</td>
+                          <td className="px-3 py-3.5">
+                            <span className="text-[10px] font-mono font-bold bg-gray-100 text-gray-500 px-2 py-1 rounded-lg tracking-wider">
+                              {folio(s.id).replace("CAP-2026-", "")}
+                            </span>
+                          </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 select-none ${av.bg} ${av.text}`}>
