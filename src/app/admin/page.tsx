@@ -111,21 +111,25 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center">
-        <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Archive className="w-7 h-7 text-amber-600" strokeWidth={1.5} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center animate-slide-up">
+        <div className="w-14 h-14 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Archive className="w-6 h-6 text-amber-500" strokeWidth={1.5} />
         </div>
-        <h3 className="font-bold text-gray-800 text-base mb-1">¿Archivar registro?</h3>
-        {name && <p className="text-sm font-semibold text-gray-700 mb-1 truncate px-2">{name}</p>}
-        <p className="text-sm text-gray-500 mb-5">El registro se moverá a archivados y podrá restaurarse.</p>
-        <div className="flex gap-3">
+        <h3 className="font-black text-gray-800 text-base mb-1">¿Archivar registro?</h3>
+        {name && (
+          <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3 mx-1">
+            <p className="text-sm font-semibold text-gray-700 truncate">{name}</p>
+          </div>
+        )}
+        <p className="text-xs text-gray-400 mb-5 leading-relaxed">El registro se moverá a archivados y podrá restaurarse en cualquier momento.</p>
+        <div className="flex gap-2.5">
           <button onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:border-gray-300 transition-all">
+            className="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold text-sm transition-all">
             Cancelar
           </button>
           <button onClick={onConfirm}
-            className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm transition-all">
+            className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all shadow-sm">
             Archivar
           </button>
         </div>
@@ -145,48 +149,50 @@ function LoginScreen({ email, setEmail, pw, setPw, onLogin, loading, error, expi
   return (
     <main className="min-h-screen flex items-center justify-center p-5 relative overflow-hidden"
       style={{ background: "linear-gradient(145deg,#3d0918 0%,#6e112c 55%,#8e1a3c 100%)" }}>
-      {/* Decoración de fondo */}
+      {/* Patrón de puntos */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+      {/* Círculos decorativos */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.07]"
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-[0.12]"
           style={{ background: "radial-gradient(circle,white 0%,transparent 70%)" }} />
-        <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full opacity-[0.07]"
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-[0.08]"
           style={{ background: "radial-gradient(circle,white 0%,transparent 70%)" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-[0.04]"
-          style={{ background: "radial-gradient(circle,white 0%,transparent 60%)" }} />
       </div>
 
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo + título */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 rounded-3xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center mx-auto mb-4 shadow-xl">
+        <div className="text-center mb-7">
+          <div className="w-20 h-20 rounded-3xl bg-white/15 backdrop-blur border border-white/20 flex items-center justify-center mx-auto mb-4 shadow-2xl">
             <Image src="/logo.svg" alt="RegulaTierra" width={46} height={46} />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">Panel Admin</h1>
-          <p className="text-white/50 text-sm mt-1">Regularización de Tierras · Capula 2026</p>
+          <p className="text-white/40 text-sm mt-1">Regularización · Capula 2026</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-7">
-          <div className="space-y-3 mb-5">
+        <div className="bg-white rounded-3xl shadow-2xl p-6">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-center">Iniciar sesión</p>
+          <div className="space-y-3 mb-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-0.5">Correo electrónico</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Correo electrónico</label>
               <input
                 type="email" placeholder="admin@ejemplo.com" value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
                 disabled={blocked}
-                className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-guinda-400 bg-gray-50/80 transition-colors disabled:opacity-50"
+                className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-guinda-300 focus:bg-white bg-gray-50 transition-all disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 ml-0.5">Contraseña</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Contraseña</label>
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"} placeholder="••••••••" value={pw}
                   onChange={(e) => setPw(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !blocked && onLogin()}
                   disabled={blocked}
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-guinda-400 bg-gray-50/80 transition-colors disabled:opacity-50"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-guinda-300 focus:bg-white bg-gray-50 transition-all disabled:opacity-50"
                 />
                 <button type="button" onClick={() => setShowPw((v) => !v)}
                   className="absolute inset-y-0 right-3 flex items-center text-gray-300 hover:text-gray-500 transition-colors"
@@ -1405,7 +1411,13 @@ export default function AdminPage() {
           </div>
         )}
         <div className="w-px h-6 bg-white/15 mx-0.5 shrink-0" />
-        <button onClick={fetchData} title="Actualizar" aria-label="Actualizar registros"
+        <button
+          onClick={() => {
+            fetchData();
+            const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd, showArchived: sa } = tableParamsRef.current;
+            fetchPage(pg, s, cc, cs, cp, sk, sd, sa);
+          }}
+          title="Actualizar" aria-label="Actualizar registros"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
         </button>
@@ -1427,19 +1439,41 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto px-4 py-5 space-y-5">
 
         {/* Bienvenida */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-gray-800 text-base leading-none">
-              {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
-            </h2>
-            <p className="text-xs text-gray-400 mt-1">
-              {filtered.length} solicitud{filtered.length !== 1 ? "es" : ""} · Municipio de Ixmiquilpan
-            </p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-black text-gray-800 text-base leading-none">
+                {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">Contraloría Municipal · Ixmiquilpan</p>
+            </div>
+            {lastUpdated && (
+              <div className="flex items-center gap-1.5 text-[11px] text-gray-400 shrink-0 md:hidden">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+              </div>
+            )}
           </div>
-          {lastUpdated && (
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 shrink-0 md:hidden">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+          {total > 0 && (
+            <div className="flex gap-4 mt-3 pt-3 border-t border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="text-xs text-gray-500">
+                  <span className="font-bold text-gray-700">{submissions.filter(s => s.status === "aprobado").length}</span> aprobados
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
+                <span className="text-xs text-gray-500">
+                  <span className="font-bold text-gray-700">{submissions.filter(s => (s.status ?? "pendiente") === "pendiente").length}</span> pendientes
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-guinda-400 shrink-0" />
+                <span className="text-xs text-gray-500">
+                  <span className="font-bold text-gray-700">{totalSup} ha</span> registradas
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -1875,27 +1909,34 @@ export default function AdminPage() {
 
               {/* Paginación */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-1 px-5 py-3 border-t border-gray-100 flex-wrap">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-                    className="p-2 rounded-xl text-gray-500 hover:text-guinda-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                    <ChevronLeft className="w-4 h-4" strokeWidth={2} />
-                  </button>
-                  {getPageNumbers(page, totalPages).map((p, i) =>
-                    p === null ? (
-                      <span key={`e${i}`} className="text-xs text-gray-300 w-6 text-center select-none">…</span>
-                    ) : (
-                      <button key={p} onClick={() => setPage(p)}
-                        className={`w-8 h-8 text-xs font-semibold rounded-xl transition-all ${
-                          p === page ? "bg-guinda-700 text-white shadow-sm" : "text-gray-500 hover:text-guinda-700 hover:bg-gray-100"
-                        }`}>
-                        {p}
-                      </button>
-                    )
-                  )}
-                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                    className="p-2 rounded-xl text-gray-500 hover:text-guinda-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                    <ChevronRight className="w-4 h-4" strokeWidth={2} />
-                  </button>
+                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/40">
+                  <span className="text-xs text-gray-400">
+                    Página {page} de {totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                      className="w-8 h-8 rounded-lg text-gray-500 hover:text-guinda-700 hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center">
+                      <ChevronLeft className="w-4 h-4" strokeWidth={2} />
+                    </button>
+                    {getPageNumbers(page, totalPages).map((p, i) =>
+                      p === null ? (
+                        <span key={`e${i}`} className="text-xs text-gray-300 w-6 text-center select-none">…</span>
+                      ) : (
+                        <button key={p} onClick={() => setPage(p)}
+                          className={`w-8 h-8 text-xs font-semibold rounded-lg transition-all ${
+                            p === page
+                              ? "bg-guinda-700 text-white shadow-sm"
+                              : "text-gray-500 hover:text-guinda-700 hover:bg-white hover:border-gray-200 border border-transparent"
+                          }`}>
+                          {p}
+                        </button>
+                      )
+                    )}
+                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                      className="w-8 h-8 rounded-lg text-gray-500 hover:text-guinda-700 hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center">
+                      <ChevronRight className="w-4 h-4" strokeWidth={2} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1918,23 +1959,28 @@ export default function AdminPage() {
 
       {/* Barra de acción masiva */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 bg-guinda-800 text-white px-5 py-3 rounded-2xl shadow-2xl animate-slide-up">
-          <span className="text-sm font-semibold shrink-0">{selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2.5 text-white px-4 py-2.5 rounded-2xl shadow-2xl animate-slide-up border border-white/10"
+          style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
+          <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1.5 rounded-xl shrink-0">
+            <Check className="w-3.5 h-3.5 text-white/70" strokeWidth={2.5} />
+            <span className="text-sm font-bold tabular-nums">{selectedIds.size}</span>
+            <span className="text-xs text-white/60">selec.</span>
+          </div>
           <div className="relative">
             <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-xl pl-3 pr-8 py-2 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-white/30">
+              className="bg-white/10 border border-white/20 rounded-xl pl-3 pr-7 py-2 text-xs font-semibold appearance-none focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer">
               <option value="">Cambiar estado…</option>
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60" strokeWidth={2} />
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/50" strokeWidth={2} />
           </div>
           <button onClick={() => bulkUpdateStatus(bulkStatus)} disabled={!bulkStatus || bulkSaving}
-            className="bg-white/15 hover:bg-white/25 disabled:opacity-40 px-4 py-2 rounded-xl text-sm font-semibold transition-colors shrink-0">
-            {bulkSaving ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> : "Aplicar"}
+            className="bg-white text-guinda-800 hover:bg-guinda-50 disabled:opacity-40 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors shrink-0">
+            {bulkSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} /> : "Aplicar"}
           </button>
           <button onClick={() => setSelectedIds(new Set())} title="Cancelar selección"
-            className="text-white/50 hover:text-white transition-colors shrink-0">
-            <X className="w-4 h-4" strokeWidth={2} />
+            className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
+            <X className="w-3.5 h-3.5" strokeWidth={2} />
           </button>
         </div>
       )}
@@ -1942,7 +1988,10 @@ export default function AdminPage() {
       {/* Modal de confirmación de eliminación */}
       {deleteConfirmId && (
         <DeleteConfirmModal
-          name={submissions.find((s) => s.id === deleteConfirmId)?.nombreCompleto ?? ""}
+          name={
+            submissions.find((s) => s.id === deleteConfirmId)?.nombreCompleto ??
+            tableData.find((s) => s.id === deleteConfirmId)?.nombreCompleto ?? ""
+          }
           onConfirm={async () => { await deleteRow(deleteConfirmId); setDeleteConfirmId(null); }}
           onCancel={() => setDeleteConfirmId(null)}
         />
