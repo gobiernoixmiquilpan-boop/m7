@@ -399,14 +399,14 @@ function StatCard({ label, value, sub, icon, color = "guinda" }: {
   const accent = color === "blue" ? "#3b82f6"        : color === "emerald" ? "#10b981"           : "#6e112c";
   const gradFrom = color === "blue" ? "rgba(59,130,246,0.04)" : color === "emerald" ? "rgba(16,185,129,0.04)" : "rgba(110,17,44,0.04)";
   return (
-    <div className="rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100 border-l-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-150 cursor-default"
-      style={{ borderLeftColor: accent, background: `linear-gradient(135deg, #ffffff 60%, ${gradFrom} 100%)` }}>
-      <div className={`w-12 h-12 rounded-2xl ${bg} ${text} flex items-center justify-center shrink-0`}>
+    <div className="rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100/80 border-l-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-default bg-white"
+      style={{ borderLeftColor: accent }}>
+      <div className={`w-11 h-11 rounded-xl ${bg} ${text} flex items-center justify-center shrink-0`}>
         {icon}
       </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-800">{value}</p>
-        <p className="text-xs text-gray-500 font-medium">{label}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-2xl font-black text-gray-800 leading-none">{value}</p>
+        <p className="text-xs text-gray-500 font-medium mt-0.5">{label}</p>
         {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
@@ -583,25 +583,34 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
       <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
 
         {/* Header */}
-        <div className="bg-guinda-800 text-white px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
+        <div className="text-white px-5 py-4 flex items-center gap-3 sticky top-0 z-10 shadow-sm"
+          style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 75%,#8b1438 100%)" }}>
           <button onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
             <X className="w-4 h-4" strokeWidth={2} />
           </button>
+          {(() => { const av = avatarCls(s.nombreCompleto); return (
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0 select-none border-2 border-white/30 ${av.bg} ${av.text}`}>
+              {initials(s.nombreCompleto)}
+            </div>
+          ); })()}
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm leading-none truncate">{s.nombreCompleto}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-guinda-300 text-xs font-mono">{folio(s.id)}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-white/50 text-[11px] font-mono">{folio(s.id)}</p>
               <button
                 onClick={async () => {
                   await navigator.clipboard.writeText(folio(s.id)).catch(() => {});
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="text-guinda-300 hover:text-white transition-colors shrink-0"
+                className="text-white/40 hover:text-white/80 transition-colors shrink-0"
                 title="Copiar folio">
-                {copied ? <Check className="w-3 h-3" strokeWidth={2.5} /> : <Copy className="w-3 h-3" strokeWidth={2} />}
+                {copied ? <Check className="w-3 h-3 text-emerald-300" strokeWidth={2.5} /> : <Copy className="w-3 h-3" strokeWidth={2} />}
               </button>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
+                {statusLabel(s.status)}
+              </span>
             </div>
           </div>
           {saving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />}
@@ -612,15 +621,20 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
           {/* Estado */}
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Estado del trámite</p>
-            <div className="flex gap-2 flex-wrap">
-              {STATUS_OPTIONS.map((o) => (
-                <button key={o.value} onClick={() => changeStatus(o.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all ${
-                    status === o.value ? `${o.cls} border-current` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
-                  }`}>
-                  {o.label}
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-2">
+              {STATUS_OPTIONS.map((o) => {
+                const Icon = o.value === "pendiente" ? Clock : o.value === "revision" ? RefreshCw : o.value === "aprobado" ? Check : X;
+                const active = status === o.value;
+                return (
+                  <button key={o.value} onClick={() => changeStatus(o.value)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                      active ? `${o.cls} border-current shadow-sm` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600"
+                    }`}>
+                    <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={active ? 2.5 : 2} />
+                    {o.label}
+                  </button>
+                );
+              })}
             </div>
             {status === "rechazado" && (
               <div className="mt-3">
@@ -835,7 +849,7 @@ function InfoSection({ title, children }: { title: string; children: React.React
   return (
     <div>
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{title}</p>
-      <div className="bg-gray-50 rounded-2xl px-4 divide-y divide-gray-100">{children}</div>
+      <div className="bg-gray-50/80 border border-gray-100 rounded-2xl px-4 divide-y divide-gray-100/80">{children}</div>
     </div>
   );
 }
@@ -1361,10 +1375,10 @@ export default function AdminPage() {
   if (!authed) return <LoginScreen email={email} setEmail={setEmail} pw={pw} setPw={setPw} onLogin={login} loading={loginLoading} error={loginError} expired={sessionExpired} remaining={loginRemaining} blocked={loginBlocked} />;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: "linear-gradient(160deg,#fdf1f4 0%,#f8f7f8 40%,#f1f5f9 100%)" }}>
 
       {/* Header */}
-      <header className="text-white px-5 py-4 flex items-center gap-3"
+      <header className="text-white px-4 py-3.5 flex items-center gap-2.5 shadow-lg sticky top-0 z-30"
         style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 70%,#8b1438 100%)" }}>
         <Link href="/"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
@@ -1374,15 +1388,18 @@ export default function AdminPage() {
           <Image src="/logo.svg" alt="RegulaTierra" width={26} height={26} />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-base leading-none">Panel Administrativo</h1>
-          <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
+          <h1 className="font-black text-sm leading-none tracking-tight">Panel Administrativo</h1>
+          <p className="text-white/50 text-[11px] mt-0.5 hidden sm:block">Regularización · Capula 2026</p>
         </div>
         {lastUpdated && (
-          <span className="text-guinda-300 text-[11px] hidden sm:flex items-center gap-1 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
-          </span>
+          <div className="hidden md:flex items-center gap-1.5 bg-white/10 rounded-lg px-2.5 py-1.5 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-white/70 text-[11px] font-medium">
+              {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          </div>
         )}
+        <div className="w-px h-6 bg-white/15 mx-0.5 shrink-0" />
         <button onClick={fetchData} title="Actualizar" aria-label="Actualizar registros"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
@@ -1392,16 +1409,35 @@ export default function AdminPage() {
           <Download className="w-4 h-4" strokeWidth={2} />
         </button>
         <button onClick={exportXLSX} title="Exportar Excel (.xlsx)" aria-label="Exportar a Excel"
-          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-emerald-300 hover:text-emerald-200">
+          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-emerald-300 hover:text-white">
           <FileText className="w-4 h-4" strokeWidth={2} />
         </button>
+        <div className="w-px h-6 bg-white/15 mx-0.5 shrink-0" />
         <button onClick={logout} title="Salir" aria-label="Cerrar sesión"
-          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-red-500/30 flex items-center justify-center transition-colors">
           <LogOut className="w-4 h-4" strokeWidth={2} />
         </button>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+
+        {/* Bienvenida */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-gray-800 text-base leading-none">
+              {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              {filtered.length} solicitud{filtered.length !== 1 ? "es" : ""} · Municipio de Ixmiquilpan
+            </p>
+          </div>
+          {lastUpdated && (
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 shrink-0 md:hidden">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            </div>
+          )}
+        </div>
 
         {/* Error de carga */}
         {fetchError && (
@@ -1692,9 +1728,16 @@ export default function AdminPage() {
                   ))}
                 </div>
               ) : tableData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                  <FileText className="w-10 h-10 mb-2 opacity-30" strokeWidth={1} />
-                  <p className="text-sm">{search || filterComunidad || filterStatus || filterPeriod ? "Sin resultados para los filtros activos" : "Aún no hay registros"}</p>
+                <div className="flex flex-col items-center justify-center py-20 text-gray-300">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center mb-4">
+                    <FileText className="w-7 h-7 opacity-40" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-sm font-semibold text-gray-400">
+                    {search || filterComunidad || filterStatus || filterPeriod ? "Sin resultados" : "Aún no hay registros"}
+                  </p>
+                  <p className="text-xs text-gray-300 mt-1">
+                    {search || filterComunidad || filterStatus || filterPeriod ? "Prueba con otros filtros" : "Las solicitudes aparecerán aquí"}
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1744,8 +1787,8 @@ export default function AdminPage() {
                         const av = avatarCls(s.nombreCompleto);
                         return (
                         <tr key={s.id} onClick={() => setSelected(s)}
-                          className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/40 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/40"} ${selectedIds.has(s.id) ? "bg-guinda-50/60" : ""}`}>
-                          <td className="px-3 py-3 w-8" onClick={(e) => e.stopPropagation()}>
+                          className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/50 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/60"} ${selectedIds.has(s.id) ? "bg-guinda-50 ring-1 ring-inset ring-guinda-200" : ""}`}>
+                          <td className="px-3 py-3.5 w-8" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               className="w-4 h-4 rounded accent-guinda-700 cursor-pointer"
@@ -1759,32 +1802,32 @@ export default function AdminPage() {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-3 text-xs font-mono text-gray-400">{folio(s.id)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3.5 text-xs font-mono text-gray-300">{folio(s.id)}</td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2.5">
                               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 select-none ${av.bg} ${av.text}`}>
                                 {initials(s.nombreCompleto)}
                               </div>
-                              <span className="font-medium text-gray-800">{s.nombreCompleto}</span>
+                              <span className="font-semibold text-gray-800 text-sm">{s.nombreCompleto}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">
+                          <td className="px-4 py-3.5 text-xs font-mono text-gray-400 whitespace-nowrap">
                             {s.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
                           </td>
-                          <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{s.comunidad}</td>
-                          <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">{s.lote || "—"}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${s.tipoTierra === "riego" ? "bg-blue-50 text-blue-700" : "bg-sky-50 text-sky-700"}`}>
+                          <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{s.comunidad}</td>
+                          <td className="px-4 py-3.5 text-xs font-mono text-gray-400 whitespace-nowrap">{s.lote || "—"}</td>
+                          <td className="px-4 py-3.5">
+                            <span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-full ${s.tipoTierra === "riego" ? "bg-blue-50 text-blue-600" : "bg-sky-50 text-sky-600"}`}>
                               {s.tipoTierra === "riego" ? "Riego" : "Temporal"}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-600">{s.superficie} ha</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
+                          <td className="px-4 py-3.5 text-sm text-gray-600 tabular-nums">{s.superficie} ha</td>
+                          <td className="px-4 py-3.5">
+                            <span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-full ${statusCls(s.status)}`}>
                               {statusLabel(s.status)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-xs">
+                          <td className="px-4 py-3.5 whitespace-nowrap text-xs">
                             <span className="flex items-center gap-1.5">
                               {isToday && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Registrado hoy" />}
                               <span className={isToday ? "text-emerald-600 font-medium" : "text-gray-400"}>
