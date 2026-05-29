@@ -589,7 +589,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col">
+      <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col modal-scroll">
 
         {/* Header */}
         <div className="text-white px-5 py-4 flex items-center gap-3 sticky top-0 z-10 shadow-sm"
@@ -768,49 +768,63 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
 
           {/* Notas del funcionario */}
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Notas internas</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Notas internas</p>
+              <span className="text-[10px] text-gray-300 font-medium">Solo admin</span>
+            </div>
             <textarea
               value={notasLocal}
               onChange={(e) => handleNotasChange(e.target.value)}
-              placeholder="Agrega notas internas sobre esta solicitud (no visibles para el ciudadano)…"
+              placeholder="Notas internas sobre esta solicitud…"
               rows={3}
-              className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-guinda-300 bg-gray-50 resize-none"
+              className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-guinda-200 focus:border-guinda-300 bg-gray-50/80 resize-none transition-all"
             />
-            <p className="text-[10px] text-gray-400 mt-0.5">Se guarda automáticamente · Solo visible en el panel admin</p>
+            <p className="text-[10px] text-gray-300 mt-0.5">Se guarda automáticamente</p>
           </div>
 
-          {/* Historial de estados */}
+          {/* Historial de estados — timeline */}
           {history.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Historial de estados</p>
-              <div className="space-y-2.5">
-                {history.map((h) => {
-                  const opt = STATUS_OPTIONS.find((o) => o.value === h.status);
-                  const dot = ({ pendiente: "bg-gray-400", revision: "bg-yellow-400", aprobado: "bg-emerald-400", rechazado: "bg-red-400" } as Record<string, string>)[h.status] ?? "bg-gray-400";
-                  return (
-                    <div key={h.id} className="flex items-start gap-2.5">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dot}`} />
-                      <div className="flex-1 min-w-0">
-                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${opt?.cls ?? "bg-gray-100 text-gray-600"}`}>
-                          {opt?.label ?? h.status}
-                        </span>
-                        {h.motivo && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{h.motivo}</p>}
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                          {new Date(h.created_at).toLocaleString("es-MX", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Historial de estados</p>
+              <div className="relative">
+                <div className="absolute left-[11px] top-3 bottom-3 w-px bg-gray-100" />
+                <div className="space-y-0">
+                  {history.map((h, idx) => {
+                    const opt = STATUS_OPTIONS.find((o) => o.value === h.status);
+                    const dotCls = ({ pendiente: "bg-gray-300 border-gray-200", revision: "bg-yellow-400 border-yellow-200", aprobado: "bg-emerald-400 border-emerald-200", rechazado: "bg-red-400 border-red-200" } as Record<string,string>)[h.status] ?? "bg-gray-300 border-gray-200";
+                    return (
+                      <div key={h.id} className={`flex items-start gap-3 ${idx < history.length - 1 ? "pb-4" : ""}`}>
+                        <div className={`w-5 h-5 rounded-full shrink-0 mt-0.5 border-2 bg-white flex items-center justify-center z-10 ${dotCls}`}>
+                          <div className={`w-2 h-2 rounded-full ${dotCls.split(" ")[0]}`} />
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${opt?.cls ?? "bg-gray-100 text-gray-600"}`}>
+                              {opt?.label ?? h.status}
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              {new Date(h.created_at).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          {h.motivo && (
+                            <p className="text-xs text-gray-500 leading-relaxed bg-red-50 border border-red-100 rounded-lg px-2.5 py-1.5 mt-1">{h.motivo}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
 
-          <p className="text-xs text-gray-400 text-center">
-            Registrado el {new Date(s.timestamp).toLocaleString("es-MX", {
-              day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
-            })}
-          </p>
+          <div className="flex items-center gap-2 py-1">
+            <div className="h-px flex-1 bg-gray-100" />
+            <p className="text-[10px] text-gray-300 shrink-0">
+              {new Date(s.timestamp).toLocaleString("es-MX", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </p>
+            <div className="h-px flex-1 bg-gray-100" />
+          </div>
         </div>
 
         {/* Lightbox */}
@@ -1436,7 +1450,7 @@ export default function AdminPage() {
         </button>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+      <div className="max-w-6xl mx-auto px-4 py-5 space-y-5 admin-content">
 
         {/* Bienvenida */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
@@ -1590,10 +1604,10 @@ export default function AdminPage() {
                 }}
               />
               {withGps.length === 0 && (
-                <p className="text-xs text-gray-400 text-center mt-3 flex items-center justify-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 opacity-50" strokeWidth={2} />
-                  Los marcadores de solicitudes aparecen cuando los ciudadanos comparten su GPS
-                </p>
+                <div className="mt-3 flex items-center gap-2.5 bg-gray-50 rounded-xl px-4 py-3">
+                  <MapPin className="w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
+                  <p className="text-xs text-gray-400">Los marcadores aparecen cuando los ciudadanos comparten su ubicación GPS</p>
+                </div>
               )}
             </div>
           </div>

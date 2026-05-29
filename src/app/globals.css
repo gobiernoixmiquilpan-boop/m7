@@ -76,6 +76,28 @@ body {
 }
 .step-active-glow { animation: step-glow 2s ease-in-out infinite; }
 
+/* ── Focus visible accesible ── */
+:focus-visible {
+  outline: 2px solid #aa1848;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) { outline: none; }
+
+/* ── Scrollbar del panel de detalle (modal lateral) ── */
+.modal-scroll::-webkit-scrollbar        { width: 4px; }
+.modal-scroll::-webkit-scrollbar-track  { background: transparent; }
+.modal-scroll::-webkit-scrollbar-thumb  { background: #f5b3c7; border-radius: 99px; }
+.modal-scroll::-webkit-scrollbar-thumb:hover { background: #aa1848; }
+
+/* ── Fade-in para el contenido del panel admin ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.admin-content { animation: fade-in 0.2s ease-out both; }
+
 /* ── Etiquetas de lotes en el mapa ── */
 .lote-label {
   background: rgba(255, 255, 255, 0.93) !important;
