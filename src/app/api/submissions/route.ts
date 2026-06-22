@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { withAdminAuth } from "@/lib/auth";
 import { checkAndIncrement } from "@/lib/rateLimit";
 
-const COMUNIDADES_VALIDAS = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
+const COMUNIDADES_VALIDAS = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
 
 function validatePost(fd: FormData): string | null {
   const nombreCompleto = (fd.get("nombreCompleto") as string | null)?.trim() ?? "";

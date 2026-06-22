@@ -49,8 +49,8 @@ interface Submission {
   nombreCompleto: string;
   comunidad: string;
   ubicacion: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   tipoTierra: string;
   superficie: string;
   predio: string;
@@ -64,8 +64,18 @@ function MapController({ submissions }: { submissions: Submission[] }) {
 
   useEffect(() => {
     if (submissions.length > 0) {
-      const bounds = submissions.map((s) => [s.lat, s.lng] as L.LatLngTuple);
-      map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [48, 48], maxZoom: 16, animate: true });
+      const bounds: L.LatLngTuple[] = [];
+      submissions.forEach((s) => {
+        if (s.lat != null && s.lng != null) {
+          bounds.push([s.lat, s.lng]);
+        } else if (s.lote) {
+          const loteObj = LOTES.find((l) => l.loteNum === s.lote);
+          if (loteObj) bounds.push(loteObj.centroid as L.LatLngTuple);
+        }
+      });
+      if (bounds.length > 0) {
+        map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [48, 48], maxZoom: 16, animate: true });
+      }
     } else {
       const coords = LOTES.flatMap((l) => l.coords);
       if (coords.length > 0) map.fitBounds(coords as L.LatLngBoundsExpression, { padding: [28, 28], maxZoom: 14, animate: false });
@@ -143,7 +153,7 @@ export default function AdminMap({ submissions, onSelectSubmission }: { submissi
                         <div style={{ color: "#111827", fontWeight: 800, fontSize: 13 }}>{lote.predioNum}</div>
                       </div>
                       <div style={{ background: "#f3f4f6", borderRadius: 5, padding: "3px 7px" }}>
-                        <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>LOTE</div>
+                        <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>POLÍGONO</div>
                         <div style={{ color: "#111827", fontWeight: 800, fontSize: 13 }}>{lote.loteNum}</div>
                       </div>
                     </div>
@@ -183,42 +193,56 @@ export default function AdminMap({ submissions, onSelectSubmission }: { submissi
         ))}
 
         {/* Marcadores de solicitudes con color por estado */}
-        {submissions.map((s) => (
-          <Marker key={s.id} position={[s.lat, s.lng]} icon={makeIcon(s.status ?? "pendiente")}>
-            <Popup>
-              <div style={{ minWidth: 170 }}>
-                <p style={{ fontWeight: 700, fontSize: 13, color: "#111827", margin: "0 0 2px" }}>{s.nombreCompleto}</p>
-                <p style={{ fontSize: 11, color: "#6b7280", margin: "0 0 6px" }}>{s.comunidad}</p>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 7 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: `${STATUS_COLORS[s.status ?? "pendiente"]}18`, color: STATUS_COLORS[s.status ?? "pendiente"], border: `1px solid ${STATUS_COLORS[s.status ?? "pendiente"]}40` }}>
-                    {STATUS_LABELS[s.status ?? "pendiente"]}
-                  </span>
-                  <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20, background: "#f3f4f6", color: "#374151" }}>
-                    {s.tipoTierra === "riego" ? "Riego" : "Temporal"}
-                  </span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 8 }}>
-                  <div style={{ background: "#f3f4f6", borderRadius: 5, padding: "3px 7px" }}>
-                    <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>LOTE</div>
-                    <div style={{ color: "#111827", fontWeight: 800, fontSize: 12 }}>{s.lote || "—"}</div>
+        {submissions.map((s) => {
+          let position: [number, number] | null = null;
+          let isApprox = false;
+          if (s.lat != null && s.lng != null) {
+            position = [s.lat, s.lng];
+          } else if (s.lote) {
+            const loteObj = LOTES.find((l) => l.loteNum === s.lote);
+            if (loteObj) { position = loteObj.centroid as [number, number]; isApprox = true; }
+          }
+          if (!position) return null;
+          return (
+            <Marker key={s.id} position={position} icon={makeIcon(s.status ?? "pendiente")}>
+              <Popup>
+                <div style={{ minWidth: 170 }}>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: "#111827", margin: "0 0 2px" }}>{s.nombreCompleto}</p>
+                  <p style={{ fontSize: 11, color: "#6b7280", margin: "0 0 6px" }}>{s.comunidad}</p>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 7 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: `${STATUS_COLORS[s.status ?? "pendiente"]}18`, color: STATUS_COLORS[s.status ?? "pendiente"], border: `1px solid ${STATUS_COLORS[s.status ?? "pendiente"]}40` }}>
+                      {STATUS_LABELS[s.status ?? "pendiente"]}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20, background: "#f3f4f6", color: "#374151" }}>
+                      {s.tipoTierra === "riego" ? "Riego" : "Temporal"}
+                    </span>
                   </div>
-                  <div style={{ background: "#f3f4f6", borderRadius: 5, padding: "3px 7px" }}>
-                    <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>SUPERFICIE</div>
-                    <div style={{ color: "#111827", fontWeight: 800, fontSize: 12 }}>{s.superficie} ha</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 8 }}>
+                    <div style={{ background: "#f3f4f6", borderRadius: 5, padding: "3px 7px" }}>
+                      <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>POLÍGONO</div>
+                      <div style={{ color: "#111827", fontWeight: 800, fontSize: 12 }}>{s.lote || "—"}</div>
+                    </div>
+                    <div style={{ background: "#f3f4f6", borderRadius: 5, padding: "3px 7px" }}>
+                      <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>SUPERFICIE</div>
+                      <div style={{ color: "#111827", fontWeight: 800, fontSize: 12 }}>{s.superficie} ha</div>
+                    </div>
                   </div>
+                  {isApprox && (
+                    <p style={{ fontSize: 10, color: "#9ca3af", marginBottom: 6 }}>📍 Ubicación aproximada por polígono</p>
+                  )}
+                  {onSelectSubmission && (
+                    <button
+                      onClick={() => onSelectSubmission(s.id)}
+                      style={{ width: "100%", padding: "6px 10px", background: "#6e112c", color: "white", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                    >
+                      Ver expediente →
+                    </button>
+                  )}
                 </div>
-                {onSelectSubmission && (
-                  <button
-                    onClick={() => onSelectSubmission(s.id)}
-                    style={{ width: "100%", padding: "6px 10px", background: "#6e112c", color: "white", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-                  >
-                    Ver expediente →
-                  </button>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
 
       {/* Leyenda de estados */}
@@ -235,7 +259,7 @@ export default function AdminMap({ submissions, onSelectSubmission }: { submissi
           );
         })}
         {submissions.length === 0 && (
-          <p className="text-xs text-gray-400">Sin solicitudes con GPS registradas aún</p>
+          <p className="text-xs text-gray-400">Sin solicitudes registradas aún</p>
         )}
       </div>
     </div>

@@ -42,7 +42,7 @@ interface FormData {
   hablaDialecto: "si" | "no" | "";
 }
 
-const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
+const COMUNIDADES = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
 const DRAFT_KEY   = "capula-draft";
 const PENDING_KEY = "capula-pending-queue";
 const TOTAL_STEPS = 8;
@@ -93,7 +93,7 @@ const STEP_TITLES = [
   "Nombre del solicitante",
   "Identificación oficial",
   "Datos de contacto",
-  "Datos del predio",
+  "Datos del polígono",
   "Dialecto ñhañhu",
   "Revisión y confirmación",
 ];
@@ -121,7 +121,7 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d$/.test(f.curp)) e.curp    = "CURP inválida";
   }
   if (step === 6) {
-    if (!f.lote.trim())      e.lote      = "Selecciona tu lote en el mapa";
+    if (!f.lote.trim())      e.lote      = "Selecciona tu polígono en el mapa";
     if (!f.tipoTierra)       e.tipoTierra = "Seleccione una opción";
     const sup = parseFloat(f.superficie);
     if (!f.superficie.trim() || isNaN(sup) || sup < 0.01 || sup > 500)
@@ -909,9 +909,9 @@ export default function Home() {
         {step === 3 && (
           <Card title="Nombre completo" hasError={!!errors.nombreCompleto}>
             <p className="text-xs text-gray-400 mb-3">Escríbelo tal como aparece en tu INE, empezando por apellidos.</p>
-            <TextInput placeholder="Ej: García López María" value={form.nombreCompleto}
-              onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v.replace(/ {2,}/g, " ") }))} error={errors.nombreCompleto}
-              autoCapitalize="words" autoCorrect="off" spellCheck={false} />
+            <TextInput placeholder="Ej: GARCÍA LÓPEZ MARÍA" value={form.nombreCompleto}
+              onChange={(v) => setForm((p) => ({ ...p, nombreCompleto: v.toUpperCase().replace(/ {2,}/g, " ") }))} error={errors.nombreCompleto}
+              autoCapitalize="characters" autoCorrect="off" spellCheck={false} />
           </Card>
         )}
 
@@ -988,9 +988,9 @@ export default function Home() {
               <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
                 <MapPin className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-blue-800">Tu GPS detectó un lote</p>
+                  <p className="text-xs font-semibold text-blue-800">Tu GPS detectó un polígono</p>
                   <p className="text-xs text-blue-600 mt-0.5">
-                    Predio {detectedLote.predioNum} · Lote {detectedLote.loteNum}
+                    Predio {detectedLote.predioNum} · Polígono {detectedLote.loteNum}
                   </p>
                 </div>
                 <button
@@ -1009,8 +1009,8 @@ export default function Home() {
             {/* Mapa de lotes */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
-                <p className="text-sm font-semibold text-gray-700">Identifica tu lote en el mapa</p>
-                <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color de tu lote — predio y lote se llenan solos</p>
+                <p className="text-sm font-semibold text-gray-700">Selecciona tu polígono en el mapa</p>
+                <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color — predio y polígono se llenan solos</p>
               </div>
               <div className="p-2">
                 <LotesMapDynamic
@@ -1040,7 +1040,7 @@ export default function Home() {
                     {form.lote.split("-").pop()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-guinda-500 uppercase tracking-widest">Lote seleccionado</p>
+                    <p className="text-[10px] font-bold text-guinda-500 uppercase tracking-widest">Polígono seleccionado</p>
                     <p className="text-base font-bold text-gray-800 leading-tight">{form.lote}</p>
                     <p className="text-xs text-gray-400">Predio {form.predio}</p>
                   </div>
@@ -1048,8 +1048,8 @@ export default function Home() {
                     type="button"
                     onClick={() => { setForm((p) => ({ ...p, lote: "", predio: "" })); }}
                     className="p-1.5 rounded-xl text-guinda-400 hover:text-guinda-700 hover:bg-guinda-100 transition-all shrink-0"
-                    title="Cambiar lote"
-                    aria-label="Quitar selección de lote"
+                    title="Cambiar polígono"
+                    aria-label="Quitar selección de polígono"
                   >
                     <X className="w-4 h-4" strokeWidth={2} />
                   </button>
@@ -1058,7 +1058,7 @@ export default function Home() {
                 <div className={`rounded-2xl border-2 border-dashed p-5 flex flex-col items-center gap-2 text-center ${errors.lote ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50"}`}>
                   <MapPin className={`w-7 h-7 ${errors.lote ? "text-red-300" : "text-gray-300"}`} strokeWidth={1.5} />
                   <p className={`text-sm font-medium ${errors.lote ? "text-red-500" : "text-gray-400"}`}>
-                    {errors.lote ?? "Toca tu lote en el mapa para seleccionarlo"}
+                    {errors.lote ?? "Toca tu polígono en el mapa para seleccionarlo"}
                   </p>
                 </div>
               );
@@ -1071,13 +1071,13 @@ export default function Home() {
                 onClick={() => setShowLoteList((v) => !v)}
                 className="text-xs text-guinda-600 hover:text-guinda-800 font-medium underline underline-offset-2 transition-colors"
               >
-                {showLoteList ? "Ocultar lista de lotes" : "¿El mapa no carga? Selecciona de la lista"}
+                {showLoteList ? "Ocultar lista de polígonos" : "¿El mapa no carga? Selecciona de la lista"}
               </button>
             </div>
             {showLoteList && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
-                  <p className="text-sm font-semibold text-gray-700">Seleccionar lote de la lista</p>
+                  <p className="text-sm font-semibold text-gray-700">Seleccionar polígono de la lista</p>
                   <p className="text-xs text-gray-400 mt-0.5">Usa el mapa de arriba si puedes — es más preciso</p>
                 </div>
                 <div className="px-5 py-4">
@@ -1093,10 +1093,10 @@ export default function Home() {
                       }}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent appearance-none bg-gray-50/50 text-gray-800"
                     >
-                      <option value="">Elige tu lote…</option>
+                      <option value="">Elige tu polígono…</option>
                       {LOTES.filter((l) => l.loteNum).map((l) => (
                         <option key={l.id} value={l.loteNum}>
-                          Lote {l.loteNum} — Predio {l.predioNum}
+                          Polígono {l.loteNum} — Predio {l.predioNum}
                         </option>
                       ))}
                     </select>
@@ -1184,7 +1184,7 @@ export default function Home() {
                   <ReviewRow label="GPS" value={`${form.lat}, ${form.lng}`} mono />
                 )}
                 <ReviewRow label="Predio" value={form.predio} />
-                <ReviewRow label="Lote" value={form.lote} />
+                <ReviewRow label="Polígono" value={form.lote} />
                 <ReviewRow label="Tipo" value={form.tipoTierra === "riego" ? "Riego" : "Temporal"} />
                 <ReviewRow label="Superficie" value={`${form.superficie} ha`} />
               </div>

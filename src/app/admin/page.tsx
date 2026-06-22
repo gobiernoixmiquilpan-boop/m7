@@ -70,7 +70,7 @@ interface Submission {
   archived_at?: string;
 }
 
-const COMUNIDADES = ["Capula", "El Alberto", "El Deca", "El Nith", "La Estancia", "Otra"];
+const COMUNIDADES = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
 const G = "#6e112c";
 const G2 = "#c42a53";
 const G3 = "#f5b3c7";
@@ -481,11 +481,11 @@ function printSubmission(s: Submission) {
   ${row("CURP", s.curp, true)}
   ${row("Celular", s.celular)}
 </table>
-<h2>Datos del predio</h2>
+<h2>Datos del polígono</h2>
 <table>
   ${row("Comunidad", s.comunidad)}
   ${row("Predio", s.predio)}
-  ${row("Lote", s.lote)}
+  ${row("Polígono", s.lote)}
   ${row("Tipo de tierra", s.tipoTierra === "riego" ? "Riego" : "Temporal")}
   ${row("Superficie", `${s.superficie} ha`)}
   ${row("Habla ñhañhu", s.hablaDialecto === "si" ? "Sí" : "No")}
@@ -738,10 +738,10 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
           </div>
 
           {/* Datos del predio */}
-          <InfoSection title="Datos del predio">
+          <InfoSection title="Datos del polígono">
             <InfoRow label="Comunidad"  value={s.comunidad} />
             <InfoRow label="Predio"     value={s.predio} />
-            <InfoRow label="Lote"       value={s.lote} mono />
+            <InfoRow label="Polígono"   value={s.lote} mono />
             <InfoRow label="Superficie" value={`${s.superficie} ha`} />
             <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0 gap-3">
               <span className="text-xs text-gray-400 font-medium shrink-0">Tipo</span>
@@ -1290,7 +1290,7 @@ export default function AdminPage() {
   }
 
   function exportCSV() {
-    const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Lote",
+    const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Polígono",
       "Tipo", "Superficie (ha)", "Dialecto ñhañhu", "Estado", "Ubicación", "Fecha"];
     const rows = filtered.map((s) => [
       folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio, s.lote,
@@ -1313,7 +1313,7 @@ export default function AdminPage() {
 
   async function exportXLSX() {
     const XLSX = await import("xlsx");
-    const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Lote",
+    const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Polígono",
       "Tipo", "Superficie (ha)", "Dialecto ñhañhu", "Estado", "Motivo rechazo", "Notas", "Ubicación", "Fecha"];
     const rows = filtered.map((s) => [
       folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio ?? "", s.lote ?? "",
@@ -1371,7 +1371,7 @@ export default function AdminPage() {
   const avgSup   = total ? (totalSupRaw / total).toFixed(2) : "0";
 
   const byComunidad = COMUNIDADES.map((c) => ({
-    name: c === "La Estancia" ? "Estancia" : c,
+    name: c === "San Pedro Capula" ? "S.P. Capula" : c === "La Huerta de Capula" ? "La Huerta" : c,
     comunidad: c,
     solicitudes: submissions.filter((s) => s.comunidad === c).length,
   })).filter((d) => d.solicitudes > 0);
@@ -1520,14 +1520,18 @@ export default function AdminPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <StatCard label="Total solicitudes" value={total}
             icon={<Users className="w-5 h-5" strokeWidth={1.5} />} />
           <StatCard label="Con GPS" value={withGps.length}
             sub={`${total ? Math.round(withGps.length / total * 100) : 0}% del total`}
             icon={<MapPin className="w-5 h-5" strokeWidth={1.5} />} color="blue" />
-          <StatCard label="Tierra de riego" value={riego}
-            icon={<Droplets className="w-5 h-5" strokeWidth={1.5} />} />
+          <StatCard label="Riego" value={riego}
+            sub={`${total ? Math.round(riego / total * 100) : 0}% del total`}
+            icon={<Droplets className="w-5 h-5" strokeWidth={1.5} />} color="blue" />
+          <StatCard label="Temporal" value={temporal}
+            sub={`${total ? Math.round(temporal / total * 100) : 0}% del total`}
+            icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
           <StatCard label="Superficie total" value={`${totalSup} ha`}
             sub={`Promedio ${avgSup} ha`}
             icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
@@ -1608,20 +1612,20 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-gray-800">Mapa de solicitudes</h2>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                  {withGps.length} con GPS
+                  {filtered.length} solicitudes · {withGps.length} con GPS
                 </span>
               </div>
               <AdminMap
-                submissions={withGps as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number; lng: number; tipoTierra: string; superficie: string; predio: string; lote: string; status?: string }[]}
+                submissions={filtered as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number | null; lng: number | null; tipoTierra: string; superficie: string; predio: string; lote: string; status?: string }[]}
                 onSelectSubmission={(id) => {
                   const sub = submissions.find((s) => s.id === id);
                   if (sub) setSelected(sub);
                 }}
               />
-              {withGps.length === 0 && (
+              {filtered.length === 0 && (
                 <div className="mt-3 flex items-center gap-2.5 bg-gray-50 rounded-xl px-4 py-3">
                   <MapPin className="w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
-                  <p className="text-xs text-gray-400">Los marcadores aparecen cuando los ciudadanos comparten su ubicación GPS</p>
+                  <p className="text-xs text-gray-400">Los marcadores aparecen cuando hay solicitudes con GPS o polígono asignado</p>
                 </div>
               )}
             </div>
@@ -1853,7 +1857,7 @@ export default function AdminPage() {
                           ["Nombre",    "nombreCompleto"],
                           ["Celular",   "celular"],
                           ["Comunidad", "comunidad"],
-                          ["Lote",      "lote"],
+                          ["Polígono",  "lote"],
                           ["Tipo",      "tipoTierra"],
                           ["Sup.",      "superficie"],
                           ["Estado",    "status"],
