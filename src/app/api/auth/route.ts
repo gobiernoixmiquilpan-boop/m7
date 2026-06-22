@@ -6,7 +6,7 @@ import { isBlocked, recordFailure, clearRateLimit } from "@/lib/rateLimit";
 const COOKIE_BASE = {
   httpOnly: true,
   sameSite: "lax" as const,
-  secure: process.env.FORCE_HTTPS === "1",
+  secure: process.env.NODE_ENV === "production",
   path: "/",
 };
 
