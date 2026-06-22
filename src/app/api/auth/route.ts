@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createToken } from "@/lib/auth";
+import { createToken, extractTokenData, revokeToken } from "@/lib/auth";
 import { createHash, timingSafeEqual } from "crypto";
 import { isBlocked, recordFailure, clearRateLimit } from "@/lib/rateLimit";
 
@@ -64,11 +64,16 @@ export async function POST(req: NextRequest) {
   await clearRateLimit(`auth:${ip}`);
   const token = createToken(email.trim());
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("admin_token", token, { ...COOKIE_BASE, maxAge: 60 * 60 * 8 });
+  res.cookies.set("admin_token", token, { ...COOKIE_BASE, maxAge: 60 * 60 * 24 * 365 });
   return res;
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
+  const token = req.cookies.get("admin_token")?.value;
+  if (token) {
+    const data = extractTokenData(token);
+    if (data) await revokeToken(data.jti, data.exp);
+  }
   const res = NextResponse.json({ ok: true });
   res.cookies.delete("admin_token");
   return res;

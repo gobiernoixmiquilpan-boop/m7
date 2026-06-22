@@ -85,6 +85,22 @@ alter table rate_limits enable row level security;
 -- Limpieza periódica de entradas expiradas (ejecutar manualmente si crece la tabla):
 -- delete from rate_limits where reset_at < now();
 
+-- ─── MIGRACIÓN v5 (revocación de tokens de sesión) ──────────────────────────
+
+create table if not exists revoked_sessions (
+  jti         text primary key,
+  expires_at  timestamptz not null
+);
+
+alter table revoked_sessions enable row level security;
+-- Sin políticas: service_role bypasea RLS; clientes anónimos no acceden.
+
+-- Índice para limpieza eficiente de tokens expirados
+create index if not exists idx_revoked_sessions_expiry on revoked_sessions(expires_at);
+
+-- Limpieza periódica (ejecutar manualmente si crece la tabla):
+-- delete from revoked_sessions where expires_at < now();
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ADMIN_PASSWORD_HASH: genera el hash con:
 --   Linux/macOS: echo -n "tu-contraseña" | sha256sum

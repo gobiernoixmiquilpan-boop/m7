@@ -1132,40 +1132,21 @@ export default function AdminPage() {
     fetchPage(page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, showArchived);
   }, [authed, page, search, filterComunidad, filterStatus, filterPeriod, sortKey, sortDir, showArchived, fetchPage]);
 
-  // Supabase Realtime vía SSE (reemplaza el polling de 5 s)
+  // Polling periódico — más robusto que SSE en conexiones inestables
   useEffect(() => {
     if (!authed) return;
 
-    let es: EventSource;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-    function connect() {
-      es = new EventSource("/api/submissions/stream");
-      es.onmessage = () => {
-        if (document.hidden) return;
-        fetchData();
-        const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd, showArchived: sa } = tableParamsRef.current;
-        fetchPage(pg, s, cc, cs, cp, sk, sd, sa);
-      };
-      es.onerror = () => {
-        es.close();
-        // Reintenta conexión en 10 segundos
-        reconnectTimer = setTimeout(() => { if (document.visibilityState !== "hidden") connect(); }, 10_000);
-      };
-    }
-
-    connect();
-
-    const onVisible = () => {
-      if (document.hidden) return;
+    function poll() {
       fetchData();
       const { page: pg, search: s, filterComunidad: cc, filterStatus: cs, filterPeriod: cp, sortKey: sk, sortDir: sd, showArchived: sa } = tableParamsRef.current;
       fetchPage(pg, s, cc, cs, cp, sk, sd, sa);
-    };
+    }
+
+    const interval = setInterval(poll, 30_000);
+    const onVisible = () => { if (!document.hidden) poll(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      es.close();
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [authed, fetchData, fetchPage]);
