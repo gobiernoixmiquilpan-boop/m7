@@ -69,6 +69,9 @@ interface Submission {
   hablaDialecto: string;
   status: string;
   fotoCasaUrl?: string;
+  fotoCasaDerechaUrl?: string;
+  fotoCasaAtrasUrl?: string;
+  fotoCasaIzquierdaUrl?: string;
   fotoINEFrenteUrl?: string;
   fotoINEAtrasUrl?: string;
   fotoPredioNorteUrl?: string;
@@ -830,7 +833,10 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
   const mapsUrl = s.lat && s.lng ? `https://maps.google.com/?q=${s.lat},${s.lng}` : null;
 
   const photos = [
-    { path: s.fotoCasaUrl,         label: "Foto de casa" },
+    { path: s.fotoCasaUrl,           label: "Casa frente"   },
+    { path: s.fotoCasaDerechaUrl,   label: "Casa derecha"  },
+    { path: s.fotoCasaAtrasUrl,     label: "Casa atrás"    },
+    { path: s.fotoCasaIzquierdaUrl, label: "Casa izquierda" },
     { path: s.fotoINEFrenteUrl,    label: "INE frente" },
     { path: s.fotoINEAtrasUrl,     label: "INE reverso" },
     { path: s.fotoPredioNorteUrl,  label: "Predio Norte" },

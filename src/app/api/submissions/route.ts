@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
 
   // Validar archivos antes de subir
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
-  for (const field of ["fotoCasa", "fotoINEFrente", "fotoINEAtras", "fotoPredioNorte", "fotoPredioSur", "fotoPredioEste", "fotoPredioOeste"]) {
+  for (const field of ["fotoCasa", "fotoCasaDerecha", "fotoCasaAtras", "fotoCasaIzquierda", "fotoINEFrente", "fotoINEAtras", "fotoPredioNorte", "fotoPredioSur", "fotoPredioEste", "fotoPredioOeste"]) {
     const file = fd.get(field) as File | null;
     if (!file || file.size === 0) continue;
     if (!file.type.startsWith("image/"))
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
 
   // Subir fotos a Storage (privado)
   const uploadResults = await Promise.allSettled(
-    ["fotoCasa", "fotoINEFrente", "fotoINEAtras", "fotoPredioNorte", "fotoPredioSur", "fotoPredioEste", "fotoPredioOeste"].map(async (field) => {
+    ["fotoCasa", "fotoCasaDerecha", "fotoCasaAtras", "fotoCasaIzquierda", "fotoINEFrente", "fotoINEAtras", "fotoPredioNorte", "fotoPredioSur", "fotoPredioEste", "fotoPredioOeste"].map(async (field) => {
       const file = fd.get(field) as File | null;
       if (!file || file.size === 0) return;
       const ext = file.name.split(".").pop() ?? "jpg";
