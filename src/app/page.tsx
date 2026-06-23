@@ -43,16 +43,12 @@ interface FormData {
   tipoTierra: "riego" | "temporal" | "";
   superficie: string;
   hablaDialecto: "si" | "no" | "";
-  fotoPredioNorte: File | null;
-  fotoPredioSur: File | null;
-  fotoPredioEste: File | null;
-  fotoPredioOeste: File | null;
 }
 
 const COMUNIDADES = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
 const DRAFT_KEY   = "capula-draft";
 const PENDING_KEY = "capula-pending-queue";
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 
 const getDB = async () => {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -91,7 +87,7 @@ const deletePhoto = async (key: string) => {
   } catch { /* noop */ }
 };
 
-type DraftFields = Omit<FormData, "fotoCasa" | "fotoCasaDerecha" | "fotoCasaAtras" | "fotoCasaIzquierda" | "fotoINEFrente" | "fotoINEAtras" | "fotoPredioNorte" | "fotoPredioSur" | "fotoPredioEste" | "fotoPredioOeste">;
+type DraftFields = Omit<FormData, "fotoCasa" | "fotoCasaDerecha" | "fotoCasaAtras" | "fotoCasaIzquierda" | "fotoINEFrente" | "fotoINEAtras">;
 type QueueItem   = { tempId: string; id: string; draft: DraftFields };
 
 const STEP_TITLES = [
@@ -101,7 +97,6 @@ const STEP_TITLES = [
   "Identificación oficial",
   "Datos de contacto",
   "Datos del polígono",
-  "Fotos del predio",
   "Dialecto ñhañhu",
   "Revisión y confirmación",
 ];
@@ -111,7 +106,6 @@ const emptyForm: FormData = {
   ubicacion: "", lat: null, lng: null, comunidad: "",
   nombreCompleto: "", fotoINEFrente: null, fotoINEAtras: null,
   celular: "", curp: "", predio: "", lote: "", tipoTierra: "", superficie: "", hablaDialecto: "",
-  fotoPredioNorte: null, fotoPredioSur: null, fotoPredioEste: null, fotoPredioOeste: null,
 };
 
 function validateStep(step: number, f: FormData): Partial<Record<keyof FormData, string>> {
@@ -142,7 +136,7 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!f.superficie.trim() || isNaN(sup) || sup < 1 || sup > 99999)
       e.superficie = "Debe ser entre 1 y 99,999 m²";
   }
-  if (step === 8 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
+  if (step === 7 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
   return e;
 }
 
@@ -179,7 +173,7 @@ async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promi
 export default function Home() {
   const [step,        setStep]        = useState(0);
   const [form,        setForm]        = useState<FormData>(emptyForm);
-  const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoCasaDerecha: null as string | null, fotoCasaAtras: null as string | null, fotoCasaIzquierda: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null, fotoPredioNorte: null as string | null, fotoPredioSur: null as string | null, fotoPredioEste: null as string | null, fotoPredioOeste: null as string | null });
+  const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoCasaDerecha: null as string | null, fotoCasaAtras: null as string | null, fotoCasaIzquierda: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null });
   const [submitted,          setSubmitted]          = useState(false);
   const [submittedId,        setSubmittedId]        = useState("");
   const [submittedOffline,   setSubmittedOffline]   = useState(false);
@@ -230,8 +224,8 @@ export default function Home() {
   /* ── Draft save ── */
   useEffect(() => {
     if (skipFirstSave.current) { skipFirstSave.current = false; return; }
-    const { fotoCasa, fotoCasaDerecha: cds, fotoCasaAtras: cas, fotoCasaIzquierda: cis, fotoINEFrente: a, fotoINEAtras: b, fotoPredioNorte: pn2, fotoPredioSur: ps2, fotoPredioEste: pe2, fotoPredioOeste: po2, ...draft } = form;
-    void fotoCasa; void cds; void cas; void cis; void a; void b; void pn2; void ps2; void pe2; void po2;
+    const { fotoCasa, fotoCasaDerecha: cds, fotoCasaAtras: cas, fotoCasaIzquierda: cis, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
+    void fotoCasa; void cds; void cas; void cis; void a; void b;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -263,20 +257,12 @@ export default function Home() {
         const fotoCasaIzquierda = await getPhoto(`${item.tempId}_fotoCasaIzquierda`);
         const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
         const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
-        const fotoPredioNorte = await getPhoto(`${item.tempId}_fotoPredioNorte`);
-        const fotoPredioSur   = await getPhoto(`${item.tempId}_fotoPredioSur`);
-        const fotoPredioEste  = await getPhoto(`${item.tempId}_fotoPredioEste`);
-        const fotoPredioOeste = await getPhoto(`${item.tempId}_fotoPredioOeste`);
         if (fotoCasa)          fd.append("fotoCasa",          fotoCasa);
         if (fotoCasaDerecha)   fd.append("fotoCasaDerecha",   fotoCasaDerecha);
         if (fotoCasaAtras)     fd.append("fotoCasaAtras",     fotoCasaAtras);
         if (fotoCasaIzquierda) fd.append("fotoCasaIzquierda", fotoCasaIzquierda);
         if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
         if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
-        if (fotoPredioNorte) fd.append("fotoPredioNorte", fotoPredioNorte);
-        if (fotoPredioSur)   fd.append("fotoPredioSur",   fotoPredioSur);
-        if (fotoPredioEste)  fd.append("fotoPredioEste",  fotoPredioEste);
-        if (fotoPredioOeste) fd.append("fotoPredioOeste", fotoPredioOeste);
 
         const res = await fetch("/api/submissions", { method: "POST", body: fd });
 
@@ -288,10 +274,6 @@ export default function Home() {
           await deletePhoto(`${item.tempId}_fotoCasaIzquierda`);
           await deletePhoto(`${item.tempId}_fotoINEFrente`);
           await deletePhoto(`${item.tempId}_fotoINEAtras`);
-          await deletePhoto(`${item.tempId}_fotoPredioNorte`);
-          await deletePhoto(`${item.tempId}_fotoPredioSur`);
-          await deletePhoto(`${item.tempId}_fotoPredioEste`);
-          await deletePhoto(`${item.tempId}_fotoPredioOeste`);
           continue;
         }
         if (!res.ok) throw new Error("server_error");
@@ -302,10 +284,6 @@ export default function Home() {
         await deletePhoto(`${item.tempId}_fotoCasaIzquierda`);
         await deletePhoto(`${item.tempId}_fotoINEFrente`);
         await deletePhoto(`${item.tempId}_fotoINEAtras`);
-        await deletePhoto(`${item.tempId}_fotoPredioNorte`);
-        await deletePhoto(`${item.tempId}_fotoPredioSur`);
-        await deletePhoto(`${item.tempId}_fotoPredioEste`);
-        await deletePhoto(`${item.tempId}_fotoPredioOeste`);
       } catch {
         remaining.push(item);
       }
@@ -376,7 +354,7 @@ export default function Home() {
     };
   }, []);
 
-  async function handleFile(field: "fotoCasa" | "fotoCasaDerecha" | "fotoCasaAtras" | "fotoCasaIzquierda" | "fotoINEFrente" | "fotoINEAtras" | "fotoPredioNorte" | "fotoPredioSur" | "fotoPredioEste" | "fotoPredioOeste", file: File | null) {
+  async function handleFile(field: "fotoCasa" | "fotoCasaDerecha" | "fotoCasaAtras" | "fotoCasaIzquierda" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file || compressing) return;
     if (file.size > 10 * 1024 * 1024) {
       setErrors((p) => ({ ...p, [field]: "La imagen no puede superar 10 MB" }));
@@ -449,10 +427,6 @@ export default function Home() {
       if (form.fotoCasaIzquierda) fd.append("fotoCasaIzquierda", form.fotoCasaIzquierda);
       if (form.fotoINEFrente) fd.append("fotoINEFrente", form.fotoINEFrente);
       if (form.fotoINEAtras)  fd.append("fotoINEAtras",  form.fotoINEAtras);
-      if (form.fotoPredioNorte)  fd.append("fotoPredioNorte",  form.fotoPredioNorte);
-      if (form.fotoPredioSur)    fd.append("fotoPredioSur",    form.fotoPredioSur);
-      if (form.fotoPredioEste)   fd.append("fotoPredioEste",   form.fotoPredioEste);
-      if (form.fotoPredioOeste)  fd.append("fotoPredioOeste",  form.fotoPredioOeste);
 
       let res: Response;
       try {
@@ -461,7 +435,7 @@ export default function Home() {
         // Error de red real (sin conexión): guardar en cola persistente
         const offlineId = crypto.randomUUID();
         const tempId = `q${Date.now()}`;
-        const { fotoCasa, fotoCasaDerecha: cd, fotoCasaAtras: ca, fotoCasaIzquierda: ci, fotoINEFrente: a, fotoINEAtras: b, fotoPredioNorte: pn, fotoPredioSur: ps, fotoPredioEste: pe, fotoPredioOeste: po, ...draft } = form;
+        const { fotoCasa, fotoCasaDerecha: cd, fotoCasaAtras: ca, fotoCasaIzquierda: ci, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
         try {
           if (fotoCasa) await savePhoto(`${tempId}_fotoCasa`, fotoCasa);
           if (cd) await savePhoto(`${tempId}_fotoCasaDerecha`,   cd);
@@ -469,10 +443,6 @@ export default function Home() {
           if (ci) await savePhoto(`${tempId}_fotoCasaIzquierda`, ci);
           if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
           if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
-          if (pn) await savePhoto(`${tempId}_fotoPredioNorte`, pn);
-          if (ps) await savePhoto(`${tempId}_fotoPredioSur`,   ps);
-          if (pe) await savePhoto(`${tempId}_fotoPredioEste`,  pe);
-          if (po) await savePhoto(`${tempId}_fotoPredioOeste`, po);
           const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
           queue.push({ tempId, id: offlineId, draft });
           localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
@@ -500,10 +470,6 @@ export default function Home() {
       await deletePhoto("fotoCasaIzquierda");
       await deletePhoto("fotoINEFrente");
       await deletePhoto("fotoINEAtras");
-      await deletePhoto("fotoPredioNorte");
-      await deletePhoto("fotoPredioSur");
-      await deletePhoto("fotoPredioEste");
-      await deletePhoto("fotoPredioOeste");
       setSubmittedId(data.id);
       setSubmitted(true);
       void drainQueue();
@@ -529,11 +495,7 @@ export default function Home() {
       if (p.fotoCasaIzquierda) URL.revokeObjectURL(p.fotoCasaIzquierda);
       if (p.fotoINEFrente)     URL.revokeObjectURL(p.fotoINEFrente);
       if (p.fotoINEAtras)      URL.revokeObjectURL(p.fotoINEAtras);
-      if (p.fotoPredioNorte)   URL.revokeObjectURL(p.fotoPredioNorte);
-      if (p.fotoPredioSur)     URL.revokeObjectURL(p.fotoPredioSur);
-      if (p.fotoPredioEste)    URL.revokeObjectURL(p.fotoPredioEste);
-      if (p.fotoPredioOeste)   URL.revokeObjectURL(p.fotoPredioOeste);
-      return { fotoCasa: null, fotoCasaDerecha: null, fotoCasaAtras: null, fotoCasaIzquierda: null, fotoINEFrente: null, fotoINEAtras: null, fotoPredioNorte: null, fotoPredioSur: null, fotoPredioEste: null, fotoPredioOeste: null };
+      return { fotoCasa: null, fotoCasaDerecha: null, fotoCasaAtras: null, fotoCasaIzquierda: null, fotoINEFrente: null, fotoINEAtras: null };
     });
     setErrors({});
     localStorage.removeItem(DRAFT_KEY);
@@ -1210,41 +1172,8 @@ export default function Home() {
           </>
         )}
 
-        {/* PASO 7 · Fotos del predio */}
+        {/* PASO 7 · Dialecto */}
         {step === 7 && (
-          <>
-            <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
-              <Camera className="w-4 h-4 text-blue-500 shrink-0 mt-px" strokeWidth={2} />
-              <div className="text-xs text-blue-800 leading-relaxed">
-                <p className="font-semibold mb-1">Fotografías del predio (opcional)</p>
-                <p>Toma una foto por cada lado del terreno. Si no puedes, puedes continuar sin ellas.</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {([
-                { field: "fotoPredioNorte" as const, label: "Norte" },
-                { field: "fotoPredioSur"   as const, label: "Sur"   },
-                { field: "fotoPredioEste"  as const, label: "Este"  },
-                { field: "fotoPredioOeste" as const, label: "Oeste" },
-              ]).map(({ field, label }) => (
-                <div key={field}>
-                  <p className="text-[10px] font-bold text-guinda-600 uppercase tracking-widest mb-2">{label}</p>
-                  <PhotoUpload
-                    label={`Foto ${label}`}
-                    icon={<MapPin className="w-5 h-5 text-guinda-600" strokeWidth={1.5} />}
-                    preview={previews[field]}
-                    inputId={`foto-predio-${field}`}
-                    onChange={(f) => handleFile(field, f)}
-                    error={errors[field]}
-                  />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* PASO 8 · Dialecto */}
-        {step === 8 && (
           <>
             <p className="text-sm text-gray-500 px-1">
               Esta información ayuda al municipio a brindar mejor atención a la comunidad.
@@ -1259,8 +1188,8 @@ export default function Home() {
           </>
         )}
 
-        {/* PASO 9 · Revisión y confirmación */}
-        {step === 9 && (
+        {/* PASO 8 · Revisión y confirmación */}
+        {step === 8 && (
           <>
             <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
               <Info className="w-4 h-4 text-amber-600 mt-px shrink-0" strokeWidth={2} />
@@ -1336,32 +1265,6 @@ export default function Home() {
                     );
                   })}
                 </div>
-                {(["fotoPredioNorte", "fotoPredioSur", "fotoPredioEste", "fotoPredioOeste"] as const).some((k) => previews[k]) && (
-                  <>
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Fotos del predio</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {([
-                        { key: "fotoPredioNorte" as const, label: "Norte" },
-                        { key: "fotoPredioSur"   as const, label: "Sur"   },
-                        { key: "fotoPredioEste"  as const, label: "Este"  },
-                        { key: "fotoPredioOeste" as const, label: "Oeste" },
-                      ]).map(({ key, label }) => (
-                        <div key={key} className="flex flex-col items-center gap-1">
-                          <p className="text-[9px] text-gray-400 font-medium">{label}</p>
-                          {previews[key] ? (
-                            <div className="relative w-full h-16 rounded-lg overflow-hidden border border-gray-100">
-                              <Image src={previews[key]!} alt={label} fill className="object-cover" unoptimized />
-                            </div>
-                          ) : (
-                            <div className="w-full h-16 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
-                              <p className="text-[9px] text-gray-300">—</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
               </div>
             </div>
 

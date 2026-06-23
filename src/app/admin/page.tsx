@@ -74,10 +74,6 @@ interface Submission {
   fotoCasaIzquierdaUrl?: string;
   fotoINEFrenteUrl?: string;
   fotoINEAtrasUrl?: string;
-  fotoPredioNorteUrl?: string;
-  fotoPredioSurUrl?: string;
-  fotoPredioEsteUrl?: string;
-  fotoPredioOesteUrl?: string;
   motivoRechazo?: string;
   notas?: string;
   updated_at?: string;
@@ -839,10 +835,6 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
     { path: s.fotoCasaIzquierdaUrl, label: "Casa izquierda" },
     { path: s.fotoINEFrenteUrl,    label: "INE frente" },
     { path: s.fotoINEAtrasUrl,     label: "INE reverso" },
-    { path: s.fotoPredioNorteUrl,  label: "Predio Norte" },
-    { path: s.fotoPredioSurUrl,    label: "Predio Sur" },
-    { path: s.fotoPredioEsteUrl,   label: "Predio Este" },
-    { path: s.fotoPredioOesteUrl,  label: "Predio Oeste" },
   ];
 
   return (
