@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "Regularización de Tierras · Capula",
   description:
     "Solicitud de regularización de tierras — Contraloría Municipal de Ixmiquilpan",
+  manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
     apple: "/apple-touch-icon.png",

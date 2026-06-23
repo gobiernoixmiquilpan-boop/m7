@@ -286,6 +286,7 @@ export default function Home() {
     };
     const handleOffline = () => setOffline(true);
 
+    setOffline(!navigator.onLine);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => {

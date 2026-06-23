@@ -1733,17 +1733,17 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-gray-800">Mapa de solicitudes</h2>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                  {filtered.length} solicitudes · {withGps.length} con GPS
+                  {submissions.length} solicitudes · {submissions.filter(s => s.lat && s.lng).length} con GPS
                 </span>
               </div>
               <AdminMap
-                submissions={filtered as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number | null; lng: number | null; tipoTierra: string; superficie: string; predio: string; lote: string; status?: string }[]}
+                submissions={submissions as { id: string; nombreCompleto: string; comunidad: string; ubicacion: string; lat: number | null; lng: number | null; tipoTierra: string; superficie: string; predio: string; lote: string; status?: string }[]}
                 onSelectSubmission={(id) => {
                   const sub = submissions.find((s) => s.id === id);
                   if (sub) setSelected(sub);
                 }}
               />
-              {filtered.length === 0 && (
+              {submissions.length === 0 && (
                 <div className="mt-3 flex items-center gap-2.5 bg-gray-50 rounded-xl px-4 py-3">
                   <MapPin className="w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
                   <p className="text-xs text-gray-400">Los marcadores aparecen cuando hay solicitudes con GPS o polígono asignado</p>
