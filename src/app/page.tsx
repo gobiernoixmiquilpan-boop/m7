@@ -781,14 +781,16 @@ export default function Home() {
           </p>
           <h1 className="text-xl font-bold text-white mb-4">{STEP_TITLES[step - 1]}</h1>
 
-          <div className="flex gap-1">
+          <div className="flex gap-1" role="list" aria-label="Progreso del formulario">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
               const done = i < step - 1;
               const current = i === step - 1;
               return (
-                <button key={i} type="button"
+                <button key={i} type="button" role="listitem"
                   onClick={() => { if (done) { setErrors({}); stepDir.current = "back"; setStep(i + 1); window.scrollTo({ top: 0, behavior: "smooth" }); } }}
-                  title={done ? `Volver al paso ${i + 1}` : undefined}
+                  aria-label={`Paso ${i + 1}: ${STEP_TITLES[i]}${current ? " (actual)" : done ? " (completado)" : ""}`}
+                  aria-current={current ? "step" : undefined}
+                  title={done ? `Volver al paso ${i + 1}: ${STEP_TITLES[i]}` : STEP_TITLES[i]}
                   className={`flex-1 rounded-full transition-all duration-500 ${
                     current ? "h-2.5 bg-white step-active-glow" : done ? "h-1.5 bg-white/70 hover:bg-white cursor-pointer" : "h-1.5 bg-white/20 cursor-default"
                   }`}
@@ -1088,6 +1090,7 @@ export default function Home() {
                   <div className="relative">
                     <select
                       value={form.lote}
+                      aria-label="Seleccionar polígono de la lista"
                       onChange={(e) => {
                         const found = LOTES.find((l) => l.loteNum === e.target.value);
                         if (found) {
@@ -1246,7 +1249,7 @@ export default function Home() {
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 pt-4 z-20"
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
         {step === TOTAL_STEPS && submitError && (
-          <div className="max-w-2xl mx-auto mb-3">
+          <div role="alert" className="max-w-2xl mx-auto mb-3">
             <p className="text-red-600 text-xs text-center bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={2} /> {submitError}
             </p>
@@ -1315,7 +1318,7 @@ function Card({ title, children, hasError }: { title: string; children: React.Re
 
 function FieldError({ msg }: { msg: string }) {
   return (
-    <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+    <p role="alert" className="text-red-500 text-xs mt-2 flex items-center gap-1">
       <AlertCircle className="w-3 h-3 shrink-0" strokeWidth={2} /> {msg}
     </p>
   );

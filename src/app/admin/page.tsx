@@ -112,11 +112,12 @@ function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onCon
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center animate-slide-up">
+      <div role="dialog" aria-modal="true" aria-labelledby="archive-modal-title"
+        className="relative bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center animate-slide-up">
         <div className="w-14 h-14 bg-amber-50 border-2 border-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Archive className="w-6 h-6 text-amber-500" strokeWidth={1.5} />
         </div>
-        <h3 className="font-black text-gray-800 text-base mb-1">¿Archivar registro?</h3>
+        <h3 id="archive-modal-title" className="font-black text-gray-800 text-base mb-1">¿Archivar registro?</h3>
         {name && (
           <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3 mx-1">
             <p className="text-sm font-semibold text-gray-700 truncate">{name}</p>
@@ -685,12 +686,13 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col modal-scroll">
+      <div role="dialog" aria-modal="true" aria-label={`Solicitud de ${s.nombreCompleto}`}
+        className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl flex flex-col modal-scroll">
 
         {/* Header */}
         <div className="text-white px-5 py-4 flex items-center gap-3 sticky top-0 z-10 shadow-sm"
           style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 75%,#8b1438 100%)" }}>
-          <button onClick={onClose}
+          <button onClick={onClose} aria-label="Cerrar"
             className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
             <X className="w-4 h-4" strokeWidth={2} />
           </button>
@@ -736,6 +738,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
                 const active = status === o.value;
                 return (
                   <button key={o.value} onClick={() => changeStatus(o.value)}
+                    aria-pressed={active}
                     className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                       active ? `${o.cls} border-current shadow-sm` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600"
                     }`}>
@@ -862,7 +865,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
                     setTimeout(() => setCopiedCurp(false), 2000);
                   }}
                   className="text-gray-300 hover:text-guinda-600 transition-colors shrink-0"
-                  title="Copiar CURP">
+                  aria-label="Copiar CURP" title="Copiar CURP">
                   {copiedCurp ? <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} /> : <Copy className="w-3.5 h-3.5" strokeWidth={2} />}
                 </button>
               </div>
@@ -914,12 +917,12 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Historial de estados</p>
               <div className="relative">
                 <div className="absolute left-[11px] top-3 bottom-3 w-px bg-gray-100" />
-                <div className="space-y-0">
+                <ol role="list" className="space-y-0">
                   {history.map((h, idx) => {
                     const opt = STATUS_OPTIONS.find((o) => o.value === h.status);
                     const dotCls = ({ pendiente: "bg-gray-300 border-gray-200", revision: "bg-yellow-400 border-yellow-200", aprobado: "bg-emerald-400 border-emerald-200", rechazado: "bg-red-400 border-red-200" } as Record<string,string>)[h.status] ?? "bg-gray-300 border-gray-200";
                     return (
-                      <div key={h.id} className={`flex items-start gap-3 ${idx < history.length - 1 ? "pb-4" : ""}`}>
+                      <li key={h.id} role="listitem" className={`flex items-start gap-3 ${idx < history.length - 1 ? "pb-4" : ""}`}>
                         <div className={`w-5 h-5 rounded-full shrink-0 mt-0.5 border-2 bg-white flex items-center justify-center z-10 ${dotCls}`}>
                           <div className={`w-2 h-2 rounded-full ${dotCls.split(" ")[0]}`} />
                         </div>
@@ -936,10 +939,10 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
                             <p className="text-xs text-gray-500 leading-relaxed bg-red-50 border border-red-100 rounded-lg px-2.5 py-1.5 mt-1">{h.motivo}</p>
                           )}
                         </div>
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ol>
               </div>
             </div>
           )}
@@ -1512,7 +1515,7 @@ export default function AdminPage() {
       {/* Header */}
       <header className="text-white px-4 py-3.5 flex items-center gap-2.5 shadow-lg sticky top-0 z-30"
         style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 70%,#8b1438 100%)" }}>
-        <Link href="/"
+        <Link href="/" aria-label="Ir al inicio"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
           <ChevronLeft className="w-5 h-5" strokeWidth={2} />
         </Link>
@@ -1605,7 +1608,7 @@ export default function AdminPage() {
 
         {/* Error de carga */}
         {fetchError && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <div role="alert" className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
             <X className="w-5 h-5 text-red-500 shrink-0" strokeWidth={2} />
             <p className="text-sm text-red-700 font-medium flex-1">{fetchError}</p>
             <button onClick={fetchData}
@@ -1630,7 +1633,7 @@ export default function AdminPage() {
             icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
           <StatCard label="Superficie total" value={`${totalSup} m²`}
             sub={`Promedio ${avgSup} m²`}
-            icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
+            icon={<Layers className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
         </div>
 
         {/* Estadísticas por estado */}
@@ -1645,6 +1648,8 @@ export default function AdminPage() {
                 <button key={o.value}
                   onClick={() => { setFilterStatus(active ? "" : o.value); changeTab("tabla"); setPage(1); skipPageScroll.current = true; }}
                   title={active ? `Quitar filtro: ${o.label}` : `Filtrar por: ${o.label}`}
+                  aria-pressed={active}
+                  aria-label={active ? `Quitar filtro: ${o.label}` : `Filtrar por: ${o.label}`}
                   className={`rounded-2xl px-4 pt-3.5 pb-3 border border-black/5 text-left transition-all hover:shadow-sm active:scale-[.98] ${o.cls} ${active ? "ring-2 ring-offset-1 ring-current shadow-md" : ""}`}>
                   <div className="flex items-center justify-between mb-2">
                     <Icon className="w-4 h-4 opacity-50" strokeWidth={2} />
@@ -2147,14 +2152,16 @@ export default function AdminPage() {
         />
       )}
 
-      {toast && (
-        <div className={`fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[100] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white pointer-events-none animate-slide-up ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
-          {toast.ok
-            ? <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
-            : <X className="w-4 h-4 shrink-0" strokeWidth={2.5} />}
-          {toast.msg}
-        </div>
-      )}
+      <div aria-live="polite" aria-atomic="true">
+        {toast && (
+          <div className={`fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[100] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white pointer-events-none animate-slide-up ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
+            {toast.ok
+              ? <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+              : <X className="w-4 h-4 shrink-0" strokeWidth={2.5} />}
+            {toast.msg}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
