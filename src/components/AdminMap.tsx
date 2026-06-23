@@ -224,7 +224,7 @@ export default function AdminMap({ submissions, onSelectSubmission }: { submissi
                     </div>
                     <div style={{ background: "#f3f4f6", borderRadius: 5, padding: "3px 7px" }}>
                       <div style={{ color: "#9ca3af", fontWeight: 600, fontSize: 9 }}>SUPERFICIE</div>
-                      <div style={{ color: "#111827", fontWeight: 800, fontSize: 12 }}>{s.superficie} ha</div>
+                      <div style={{ color: "#111827", fontWeight: 800, fontSize: 12 }}>{s.superficie} m²</div>
                     </div>
                   </div>
                   {isApprox && (

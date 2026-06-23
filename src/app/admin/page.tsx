@@ -45,6 +45,13 @@ const AdminMap = dynamic(() => import("@/components/AdminMap"), {
   ),
 });
 
+const LoteMiniMap = dynamic(() => import("@/components/LoteMiniMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[260px] bg-gray-100 rounded-xl animate-pulse mx-3 mb-3" />
+  ),
+});
+
 interface Submission {
   id: string;
   timestamp: string;
@@ -304,6 +311,18 @@ function LoteCard({ lote, items, onSelect }: {
 
       {open && (
         <div className="border-t border-gray-100">
+          {/* Mini-mapa del polígono */}
+          {items.length > 0 && lote.loteNum !== "—" && (
+            <div className="p-3 pb-0">
+              <LoteMiniMap
+                loteNum={lote.loteNum}
+                color={lote.color}
+                fillColor={lote.fillColor}
+                items={items}
+                onSelect={onSelect}
+              />
+            </div>
+          )}
           {items.map((s) => {
             const av = avatarCls(s.nombreCompleto);
             return (
