@@ -197,6 +197,8 @@ export default function Home() {
   const [offline,     setOffline]     = useState(false);
   const [consented,   setConsented]   = useState(false);
   const [showLoteModal, setShowLoteModal] = useState(false);
+  const [loteInput,     setLoteInput]     = useState("");
+  const [loteInputErr,  setLoteInputErr]  = useState(false);
 
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1078,6 +1080,48 @@ export default function Home() {
               <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
                 <p className="text-sm font-semibold text-gray-700">Selecciona tu polígono en el mapa</p>
                 <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color — predio y polígono se llenan solos</p>
+                {/* Ingreso por número de lote */}
+                <div className="flex gap-2 mt-2.5">
+                  <input
+                    type="text"
+                    value={loteInput}
+                    onChange={(e) => { setLoteInput(e.target.value); setLoteInputErr(false); }}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return;
+                      const found = LOTES.find((l) => l.loteNum && l.loteNum.toUpperCase() === loteInput.trim().toUpperCase());
+                      if (found) {
+                        setForm((p) => ({ ...p, lote: found.loteNum, predio: found.predioNum }));
+                        setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
+                        setLoteInput("");
+                        setLoteInputErr(false);
+                      } else {
+                        setLoteInputErr(true);
+                      }
+                    }}
+                    placeholder="Número de lote (ej. 6405-F)"
+                    className={`flex-1 min-w-0 text-xs px-3 py-1.5 rounded-lg border font-medium outline-none transition-colors ${loteInputErr ? "border-red-400 bg-red-50 text-red-700 placeholder:text-red-300" : "border-gray-200 bg-white text-gray-800 placeholder:text-gray-400 focus:border-guinda-400"}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const found = LOTES.find((l) => l.loteNum && l.loteNum.toUpperCase() === loteInput.trim().toUpperCase());
+                      if (found) {
+                        setForm((p) => ({ ...p, lote: found.loteNum, predio: found.predioNum }));
+                        setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
+                        setLoteInput("");
+                        setLoteInputErr(false);
+                      } else {
+                        setLoteInputErr(true);
+                      }
+                    }}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-guinda-700 hover:bg-guinda-800 text-white text-xs font-bold transition-colors"
+                  >
+                    Ir
+                  </button>
+                </div>
+                {loteInputErr && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">Número de lote no encontrado</p>
+                )}
               </div>
               <div className="p-2">
                 <LotesMapDynamic
