@@ -38,14 +38,27 @@ function makeIcon(status = "pendiente") {
 
 interface Submission {
   id: string;
+  timestamp: string;
   nombreCompleto: string;
   comunidad: string;
+  ubicacion: string;
   lat: number | null;
   lng: number | null;
+  celular: string;
+  curp: string;
+  predio: string;
   lote: string;
-  superficie: string;
   tipoTierra: string;
-  status?: string;
+  superficie: string;
+  hablaDialecto: string;
+  status: string;
+  fotoCasaUrl?: string;
+  fotoINEFrenteUrl?: string;
+  fotoINEAtrasUrl?: string;
+  motivoRechazo?: string;
+  notas?: string;
+  updated_at?: string;
+  archived_at?: string;
 }
 
 function FitToLote({ loteNum }: { loteNum: string }) {
