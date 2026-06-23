@@ -334,6 +334,10 @@ export default function Home() {
 
   async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
     if (!file || compressing) return;
+    if (file.size > 20 * 1024 * 1024) {
+      setErrors((p) => ({ ...p, [field]: "La imagen no puede superar 20 MB" }));
+      return;
+    }
     setCompressing(true);
     const compressed = await compressImage(file);
     setCompressing(false);
@@ -1368,9 +1372,10 @@ function RadioGroup({ options, value, onChange, error }: {
 }) {
   return (
     <>
-      <div className="flex gap-3">
+      <div className="flex gap-3" role="group">
         {options.map((o) => (
           <button key={o.value} type="button" onClick={() => onChange(o.value)}
+            aria-pressed={value === o.value}
             className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 text-sm font-semibold transition-all ${
               value === o.value
                 ? "border-guinda-700 bg-guinda-700 text-white shadow-sm"

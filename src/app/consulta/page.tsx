@@ -11,8 +11,8 @@ const HISTORY_KEY = "capula-folio-history";
 function normalize(v: string): string {
   const upper = v.toUpperCase().replace(/[^A-Z0-9-]/g, "");
   // If user types only hex digits (≥2 chars, no "C" prefix), auto-prepend "CAP-2026-"
-  if (!upper.startsWith("C") && upper.length >= 2 && /^[A-F0-9]+$/.test(upper)) {
-    return `CAP-2026-${upper.slice(0, 6)}`;
+  if (!upper.startsWith("C") && /^[A-F0-9]{6}$/.test(upper)) {
+    return `CAP-2026-${upper}`;
   }
   return upper.slice(0, 15);
 }

@@ -512,6 +512,98 @@ function printSubmission(s: Submission) {
   w.document.close();
 }
 
+/* ──────────────────── Print resumen por comunidad ──────────────────── */
+function printCommunitySummary(submissions: Submission[]) {
+  const now = new Date().toLocaleString("es-MX", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const COMMS = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
+
+  function stats(subs: Submission[]) {
+    const total     = subs.length;
+    const pendiente = subs.filter((s) => (s.status ?? "pendiente") === "pendiente").length;
+    const revision  = subs.filter((s) => s.status === "revision").length;
+    const aprobado  = subs.filter((s) => s.status === "aprobado").length;
+    const rechazado = subs.filter((s) => s.status === "rechazado").length;
+    const superficie = subs.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+    const riego     = subs.filter((s) => s.tipoTierra === "riego").length;
+    const temporal  = subs.filter((s) => s.tipoTierra === "temporal").length;
+    const dialecto  = subs.filter((s) => s.hablaDialecto === "si").length;
+    const pct = (n: number) => total > 0 ? ` (${Math.round((n / total) * 100)}%)` : "";
+    return { total, pendiente, revision, aprobado, rechazado, superficie, riego, temporal, dialecto, pct };
+  }
+
+  const byComm = COMMS.map((c) => ({ nombre: c, ...stats(submissions.filter((s) => s.comunidad === c)) }));
+  const tot    = stats(submissions);
+
+  const tr = (d: typeof byComm[0], cls = "") => `
+    <tr class="${cls}">
+      <td class="comm">${escHtml(d.nombre)}</td>
+      <td class="n">${d.total}</td>
+      <td class="n pend">${d.pendiente}</td>
+      <td class="n rev">${d.revision}</td>
+      <td class="n apro">${d.aprobado}</td>
+      <td class="n rech">${d.rechazado}</td>
+      <td class="n">${d.superficie.toFixed(0)} m²</td>
+      <td class="n">${d.riego}${d.pct(d.riego)}</td>
+      <td class="n">${d.temporal}${d.pct(d.temporal)}</td>
+      <td class="n">${d.dialecto}${d.pct(d.dialecto)}</td>
+    </tr>`;
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Resumen por Comunidad — RegulaTierra Capula 2026</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:28px}
+  .hdr{border-bottom:3px solid #6e112c;padding-bottom:12px;margin-bottom:18px}
+  .org{font-size:9.5px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+  .tit{font-size:18px;font-weight:800;color:#6e112c;margin-bottom:2px}
+  .sub{font-size:9.5px;color:#888}
+  table{width:100%;border-collapse:collapse}
+  th{background:#6e112c;color:#fff;padding:7px 5px;font-size:9px;text-transform:uppercase;letter-spacing:.05em;text-align:center}
+  th:first-child{text-align:left}
+  td{padding:7px 5px;border-bottom:1px solid #eee;vertical-align:middle}
+  td.comm{font-weight:700;font-size:11px}
+  td.n{text-align:center;font-size:10.5px}
+  td.pend{color:#78350f}
+  td.rev{color:#92400e}
+  td.apro{color:#065f46;font-weight:700}
+  td.rech{color:#7f1d1d}
+  tr.total{background:#fdf1f4;border-top:2px solid #6e112c}
+  tr.total td{font-weight:800}
+  tr:hover{background:#fafafa}
+  .footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#999;display:flex;justify-content:space-between}
+  @media print{@page{margin:15mm}button{display:none!important}body{padding:0}}
+</style></head><body>
+<div class="hdr">
+  <div class="org">Contraloría Municipal · Ixmiquilpan · Regularización de Tierras Capula 2026</div>
+  <div class="tit">Resumen por Comunidad</div>
+  <div class="sub">Generado: ${escHtml(now)} &nbsp;·&nbsp; Total: ${tot.total} solicitudes &nbsp;·&nbsp; Superficie: ${tot.superficie.toFixed(0)} m²</div>
+</div>
+<table>
+  <thead><tr>
+    <th>Comunidad</th>
+    <th>Total</th><th>Pendiente</th><th>Revisión</th><th>Aprobado</th><th>Rechazado</th>
+    <th>Sup. (m²)</th><th>Riego</th><th>Temporal</th><th>Habla Ñhañhu</th>
+  </tr></thead>
+  <tbody>
+    ${byComm.map((d) => tr(d)).join("")}
+    ${tr({ nombre: "TOTAL GENERAL", ...tot }, "total")}
+  </tbody>
+</table>
+<div class="footer">
+  <span>RegulaTierra — Contraloría Municipal de Ixmiquilpan</span>
+  <span>${escHtml(now)}</span>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`;
+
+  const w = window.open("about:blank", "_blank");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+}
+
 type HistoryEntry = { id: number; status: string; motivo: string | null; created_at: string };
 
 /* ──────────────────── Detail modal ──────────────────── */
@@ -1458,6 +1550,10 @@ export default function AdminPage() {
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-emerald-300 hover:text-white">
           <FileText className="w-4 h-4" strokeWidth={2} />
         </button>
+        <button onClick={() => printCommunitySummary(submissions)} title="Imprimir resumen por comunidad" aria-label="Imprimir resumen por comunidad"
+          className="hidden sm:flex w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 items-center justify-center transition-colors text-blue-200 hover:text-white">
+          <Printer className="w-4 h-4" strokeWidth={2} />
+        </button>
         <div className="w-px h-6 bg-white/15 mx-0.5 shrink-0" />
         <button onClick={logout} title="Salir" aria-label="Cerrar sesión"
           className="w-9 h-9 rounded-xl bg-white/10 hover:bg-red-500/30 flex items-center justify-center transition-colors">
@@ -1574,7 +1670,7 @@ export default function AdminPage() {
             lotes:  conItemsCount   > 0 ? conItemsCount    : undefined,
           };
           return (
-            <div className="flex gap-1 bg-gray-100/80 rounded-2xl p-1">
+            <div className="flex gap-1 bg-gray-100/80 rounded-2xl p-1" role="tablist" aria-label="Vistas del panel">
               {([
                 { id: "mapa",    label: "Mapa",      Icon: MapPin    },
                 { id: "lotes",   label: "Por lote",  Icon: Layers    },
@@ -1585,6 +1681,7 @@ export default function AdminPage() {
                 const badge  = tabBadges[id];
                 return (
                   <button key={id} onClick={() => changeTab(id)}
+                    role="tab" aria-selected={active} aria-label={label}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                       active
                         ? "bg-white text-guinda-800 shadow-sm border border-gray-100"
@@ -1671,8 +1768,18 @@ export default function AdminPage() {
                     <h2 className="font-bold text-gray-800 text-sm">Por comunidad</h2>
                     <p className="text-[11px] text-gray-400 mt-0.5">Toca una barra para filtrar</p>
                   </div>
-                  <div className="w-8 h-8 rounded-xl bg-guinda-50 flex items-center justify-center">
-                    <MapPin className="w-4 h-4 text-guinda-600" strokeWidth={2} />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => printCommunitySummary(submissions)}
+                      title="Imprimir resumen por comunidad"
+                      aria-label="Imprimir resumen por comunidad"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-guinda-700 hover:text-guinda-900 bg-guinda-50 hover:bg-guinda-100 border border-guinda-200 px-3 py-2 rounded-xl transition-all">
+                      <Printer className="w-3.5 h-3.5" strokeWidth={2} />
+                      <span className="hidden sm:inline">Imprimir resumen</span>
+                    </button>
+                    <div className="w-8 h-8 rounded-xl bg-guinda-50 flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-guinda-600" strokeWidth={2} />
+                    </div>
                   </div>
                 </div>
                 {byComunidad.length > 0 ? (
@@ -1768,6 +1875,7 @@ export default function AdminPage() {
                     value={draftSearch}
                     onChange={(e) => handleSearch(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Escape") { handleSearch(""); e.currentTarget.blur(); } }}
+                    aria-label="Buscar registros"
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
                   />
                 </div>
@@ -1775,6 +1883,7 @@ export default function AdminPage() {
                 <div className="relative shrink-0">
                   <select value={filterComunidad}
                     onChange={(e) => { setFilterComunidad(e.target.value); setPage(1); }}
+                    aria-label="Filtrar por comunidad"
                     className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
                     <option value="">Todas las comunidades</option>
                     {COMUNIDADES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1784,6 +1893,7 @@ export default function AdminPage() {
                 <div className="relative shrink-0">
                   <select value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                    aria-label="Filtrar por estado"
                     className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
                     <option value="">Todos los estados</option>
                     {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1793,6 +1903,7 @@ export default function AdminPage() {
                 <div className="relative shrink-0">
                   <select value={filterPeriod}
                     onChange={(e) => { setFilterPeriod(e.target.value); setPage(1); }}
+                    aria-label="Filtrar por período"
                     className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
                     <option value="">Todas las fechas</option>
                     <option value="hoy">Hoy</option>
