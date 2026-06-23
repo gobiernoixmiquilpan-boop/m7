@@ -79,12 +79,13 @@ export default function ConsultaPage() {
 
       <div className="flex-1 flex flex-col items-center px-4 pt-8 pb-10">
         <div className="w-full max-w-sm space-y-4">
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
             <div>
-              <label className="text-sm font-semibold text-gray-700 block mb-2">
+              <label htmlFor="folio-input" className="text-sm font-semibold text-gray-700 block mb-2">
                 Número de folio
               </label>
               <input
+                id="folio-input"
                 type="text"
                 inputMode="text"
                 placeholder="CAP-2026-4A2B1C"
@@ -95,9 +96,10 @@ export default function ConsultaPage() {
                 }`}
                 autoComplete="off"
                 spellCheck={false}
+                aria-describedby={error ? "folio-error" : undefined}
               />
               {error && (
-                <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+                <p id="folio-error" role="alert" className="text-red-500 text-xs mt-2 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3 shrink-0" strokeWidth={2} /> {error}
                 </p>
               )}
@@ -119,10 +121,12 @@ export default function ConsultaPage() {
                   <div key={f} className="flex items-center gap-2 px-4 py-0.5">
                     <button
                       onClick={() => { saveHistory(f); router.push(`/consulta/${f}`); }}
+                      aria-label={`Consultar folio ${f}`}
                       className="flex-1 text-left py-3 text-sm font-mono font-semibold text-guinda-700 hover:text-guinda-900 tracking-wider transition-colors">
                       {f}
                     </button>
                     <button onClick={() => removeHistory(f)}
+                      aria-label={`Eliminar ${f} del historial`}
                       className="p-1.5 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-all">
                       <X className="w-3.5 h-3.5" strokeWidth={2} />
                     </button>

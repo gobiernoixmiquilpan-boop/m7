@@ -1926,6 +1926,8 @@ export default function AdminPage() {
                 )}
                 <button
                   onClick={() => { setShowArchived((v) => !v); setPage(1); setSelectedIds(new Set()); skipPageScroll.current = true; }}
+                  aria-pressed={showArchived}
+                  aria-label={showArchived ? "Ver registros activos" : "Ver registros archivados"}
                   className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-xl border transition-all shrink-0 ${showArchived ? "bg-amber-100 text-amber-700 border-amber-300" : "bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300"}`}>
                   <Archive className="w-3.5 h-3.5" strokeWidth={2} />
                   {showArchived ? "Ver activos" : "Archivados"}
@@ -1956,12 +1958,13 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm" aria-label="Solicitudes">
                     <thead>
                       <tr className="border-b-2 border-gray-100 bg-gray-50">
                         <th className="px-3 py-3.5 w-8" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
+                            aria-label="Seleccionar todos los registros"
                             className="w-4 h-4 rounded accent-guinda-700 cursor-pointer"
                             checked={selectedIds.size > 0 && tableData.every((s) => selectedIds.has(s.id))}
                             onChange={(e) => {
@@ -1982,6 +1985,7 @@ export default function AdminPage() {
                           ["Fecha",     "timestamp",      "hidden sm:table-cell"],
                         ] as [string, keyof Submission, string][]).map(([label, key, hideCls]) => (
                           <th key={key} onClick={() => toggleSort(key)}
+                            aria-sort={sortKey === key ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                             className={`text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap cursor-pointer hover:text-guinda-700 select-none transition-colors ${hideCls}`}>
                             <span className="inline-flex items-center gap-1">
                               {label}
@@ -2002,10 +2006,14 @@ export default function AdminPage() {
                         const av = avatarCls(s.nombreCompleto);
                         return (
                         <tr key={s.id} onClick={() => setSelected(s)}
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(s); } }}
+                          aria-label={`Ver solicitud de ${s.nombreCompleto}`}
                           className={`border-b border-gray-50 border-l-2 ${leftBorder} hover:bg-guinda-50/50 transition-colors cursor-pointer ${i % 2 === 0 ? "" : "bg-gray-50/60"} ${selectedIds.has(s.id) ? "bg-guinda-50 ring-1 ring-inset ring-guinda-200" : ""}`}>
                           <td className="px-3 py-3.5 w-8" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
+                              aria-label={`Seleccionar ${s.nombreCompleto}`}
                               className="w-4 h-4 rounded accent-guinda-700 cursor-pointer"
                               checked={selectedIds.has(s.id)}
                               onChange={(e) => {
@@ -2068,8 +2076,9 @@ export default function AdminPage() {
                   <span className="text-xs text-gray-400">
                     Página {page} de {totalPages}
                   </span>
-                  <div className="flex items-center gap-1">
+                  <nav aria-label="Paginación" className="flex items-center gap-1">
                     <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                      aria-label="Página anterior"
                       className="w-8 h-8 rounded-lg text-gray-500 hover:text-guinda-700 hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center">
                       <ChevronLeft className="w-4 h-4" strokeWidth={2} />
                     </button>
@@ -2078,6 +2087,8 @@ export default function AdminPage() {
                         <span key={`e${i}`} className="text-xs text-gray-300 w-6 text-center select-none">…</span>
                       ) : (
                         <button key={p} onClick={() => setPage(p)}
+                          aria-label={`Página ${p}`}
+                          aria-current={p === page ? "page" : undefined}
                           className={`w-8 h-8 text-xs font-semibold rounded-lg transition-all ${
                             p === page
                               ? "bg-guinda-700 text-white shadow-sm"
@@ -2088,10 +2099,11 @@ export default function AdminPage() {
                       )
                     )}
                     <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                      aria-label="Página siguiente"
                       className="w-8 h-8 rounded-lg text-gray-500 hover:text-guinda-700 hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center">
                       <ChevronRight className="w-4 h-4" strokeWidth={2} />
                     </button>
-                  </div>
+                  </nav>
                 </div>
               )}
             </div>
@@ -2123,6 +2135,7 @@ export default function AdminPage() {
           </div>
           <div className="relative">
             <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}
+              aria-label="Cambiar estado de los registros seleccionados"
               className="bg-white/10 border border-white/20 rounded-xl pl-3 pr-7 py-2 text-xs font-semibold appearance-none focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer">
               <option value="">Cambiar estado…</option>
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -2133,7 +2146,8 @@ export default function AdminPage() {
             className="bg-white text-guinda-800 hover:bg-guinda-50 disabled:opacity-40 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors shrink-0">
             {bulkSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} /> : "Aplicar"}
           </button>
-          <button onClick={() => setSelectedIds(new Set())} title="Cancelar selección"
+          <button onClick={() => setSelectedIds(new Set())}
+            aria-label="Cancelar selección" title="Cancelar selección"
             className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
             <X className="w-3.5 h-3.5" strokeWidth={2} />
           </button>
