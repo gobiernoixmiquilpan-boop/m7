@@ -40,12 +40,16 @@ interface FormData {
   tipoTierra: "riego" | "temporal" | "";
   superficie: string;
   hablaDialecto: "si" | "no" | "";
+  fotoPredioNorte: File | null;
+  fotoPredioSur: File | null;
+  fotoPredioEste: File | null;
+  fotoPredioOeste: File | null;
 }
 
 const COMUNIDADES = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
 const DRAFT_KEY   = "capula-draft";
 const PENDING_KEY = "capula-pending-queue";
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 const getDB = async () => {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -84,7 +88,7 @@ const deletePhoto = async (key: string) => {
   } catch { /* noop */ }
 };
 
-type DraftFields = Omit<FormData, "fotoCasa" | "fotoINEFrente" | "fotoINEAtras">;
+type DraftFields = Omit<FormData, "fotoCasa" | "fotoINEFrente" | "fotoINEAtras" | "fotoPredioNorte" | "fotoPredioSur" | "fotoPredioEste" | "fotoPredioOeste">;
 type QueueItem   = { tempId: string; id: string; draft: DraftFields };
 
 const STEP_TITLES = [
@@ -94,6 +98,7 @@ const STEP_TITLES = [
   "Identificación oficial",
   "Datos de contacto",
   "Datos del polígono",
+  "Fotos del predio",
   "Dialecto ñhañhu",
   "Revisión y confirmación",
 ];
@@ -102,6 +107,7 @@ const emptyForm: FormData = {
   fotoCasa: null, ubicacion: "", lat: null, lng: null, comunidad: "",
   nombreCompleto: "", fotoINEFrente: null, fotoINEAtras: null,
   celular: "", curp: "", predio: "", lote: "", tipoTierra: "", superficie: "", hablaDialecto: "",
+  fotoPredioNorte: null, fotoPredioSur: null, fotoPredioEste: null, fotoPredioOeste: null,
 };
 
 function validateStep(step: number, f: FormData): Partial<Record<keyof FormData, string>> {
@@ -127,7 +133,7 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!f.superficie.trim() || isNaN(sup) || sup < 1 || sup > 99999)
       e.superficie = "Debe ser entre 1 y 99,999 m²";
   }
-  if (step === 7 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
+  if (step === 8 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
   return e;
 }
 
@@ -164,7 +170,7 @@ async function compressImage(file: File, maxWidth = 1280, quality = 0.75): Promi
 export default function Home() {
   const [step,        setStep]        = useState(0);
   const [form,        setForm]        = useState<FormData>(emptyForm);
-  const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null });
+  const [previews,    setPreviews]    = useState({ fotoCasa: null as string | null, fotoINEFrente: null as string | null, fotoINEAtras: null as string | null, fotoPredioNorte: null as string | null, fotoPredioSur: null as string | null, fotoPredioEste: null as string | null, fotoPredioOeste: null as string | null });
   const [submitted,          setSubmitted]          = useState(false);
   const [submittedId,        setSubmittedId]        = useState("");
   const [submittedOffline,   setSubmittedOffline]   = useState(false);
@@ -187,7 +193,7 @@ export default function Home() {
   const [showSaved,   setShowSaved]   = useState(false);
   const [offline,     setOffline]     = useState(false);
   const [consented,   setConsented]   = useState(false);
-  const [showLoteList, setShowLoteList] = useState(false);
+  const [showLoteModal, setShowLoteModal] = useState(false);
 
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,8 +221,8 @@ export default function Home() {
   /* ── Draft save ── */
   useEffect(() => {
     if (skipFirstSave.current) { skipFirstSave.current = false; return; }
-    const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
-    void fotoCasa; void a; void b;
+    const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, fotoPredioNorte: pn2, fotoPredioSur: ps2, fotoPredioEste: pe2, fotoPredioOeste: po2, ...draft } = form;
+    void fotoCasa; void a; void b; void pn2; void ps2; void pe2; void po2;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -245,9 +251,17 @@ export default function Home() {
         const fotoCasa      = await getPhoto(`${item.tempId}_fotoCasa`);
         const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
         const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
+        const fotoPredioNorte = await getPhoto(`${item.tempId}_fotoPredioNorte`);
+        const fotoPredioSur   = await getPhoto(`${item.tempId}_fotoPredioSur`);
+        const fotoPredioEste  = await getPhoto(`${item.tempId}_fotoPredioEste`);
+        const fotoPredioOeste = await getPhoto(`${item.tempId}_fotoPredioOeste`);
         if (fotoCasa)      fd.append("fotoCasa",      fotoCasa);
         if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
         if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
+        if (fotoPredioNorte) fd.append("fotoPredioNorte", fotoPredioNorte);
+        if (fotoPredioSur)   fd.append("fotoPredioSur",   fotoPredioSur);
+        if (fotoPredioEste)  fd.append("fotoPredioEste",  fotoPredioEste);
+        if (fotoPredioOeste) fd.append("fotoPredioOeste", fotoPredioOeste);
 
         const res = await fetch("/api/submissions", { method: "POST", body: fd });
 
@@ -256,6 +270,10 @@ export default function Home() {
           await deletePhoto(`${item.tempId}_fotoCasa`);
           await deletePhoto(`${item.tempId}_fotoINEFrente`);
           await deletePhoto(`${item.tempId}_fotoINEAtras`);
+          await deletePhoto(`${item.tempId}_fotoPredioNorte`);
+          await deletePhoto(`${item.tempId}_fotoPredioSur`);
+          await deletePhoto(`${item.tempId}_fotoPredioEste`);
+          await deletePhoto(`${item.tempId}_fotoPredioOeste`);
           continue;
         }
         if (!res.ok) throw new Error("server_error");
@@ -263,6 +281,10 @@ export default function Home() {
         await deletePhoto(`${item.tempId}_fotoCasa`);
         await deletePhoto(`${item.tempId}_fotoINEFrente`);
         await deletePhoto(`${item.tempId}_fotoINEAtras`);
+        await deletePhoto(`${item.tempId}_fotoPredioNorte`);
+        await deletePhoto(`${item.tempId}_fotoPredioSur`);
+        await deletePhoto(`${item.tempId}_fotoPredioEste`);
+        await deletePhoto(`${item.tempId}_fotoPredioOeste`);
       } catch {
         remaining.push(item);
       }
@@ -333,7 +355,7 @@ export default function Home() {
     };
   }, []);
 
-  async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras", file: File | null) {
+  async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras" | "fotoPredioNorte" | "fotoPredioSur" | "fotoPredioEste" | "fotoPredioOeste", file: File | null) {
     if (!file || compressing) return;
     if (file.size > 20 * 1024 * 1024) {
       setErrors((p) => ({ ...p, [field]: "La imagen no puede superar 20 MB" }));
@@ -403,6 +425,10 @@ export default function Home() {
       if (form.fotoCasa)      fd.append("fotoCasa",      form.fotoCasa);
       if (form.fotoINEFrente) fd.append("fotoINEFrente", form.fotoINEFrente);
       if (form.fotoINEAtras)  fd.append("fotoINEAtras",  form.fotoINEAtras);
+      if (form.fotoPredioNorte)  fd.append("fotoPredioNorte",  form.fotoPredioNorte);
+      if (form.fotoPredioSur)    fd.append("fotoPredioSur",    form.fotoPredioSur);
+      if (form.fotoPredioEste)   fd.append("fotoPredioEste",   form.fotoPredioEste);
+      if (form.fotoPredioOeste)  fd.append("fotoPredioOeste",  form.fotoPredioOeste);
 
       let res: Response;
       try {
@@ -411,11 +437,15 @@ export default function Home() {
         // Error de red real (sin conexión): guardar en cola persistente
         const offlineId = crypto.randomUUID();
         const tempId = `q${Date.now()}`;
-        const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, ...draft } = form;
+        const { fotoCasa, fotoINEFrente: a, fotoINEAtras: b, fotoPredioNorte: pn, fotoPredioSur: ps, fotoPredioEste: pe, fotoPredioOeste: po, ...draft } = form;
         try {
           if (fotoCasa) await savePhoto(`${tempId}_fotoCasa`, fotoCasa);
           if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
           if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
+          if (pn) await savePhoto(`${tempId}_fotoPredioNorte`, pn);
+          if (ps) await savePhoto(`${tempId}_fotoPredioSur`,   ps);
+          if (pe) await savePhoto(`${tempId}_fotoPredioEste`,  pe);
+          if (po) await savePhoto(`${tempId}_fotoPredioOeste`, po);
           const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
           queue.push({ tempId, id: offlineId, draft });
           localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
@@ -459,10 +489,14 @@ export default function Home() {
     setForm(emptyForm);
     setDetectedLote(null);
     setPreviews((p) => {
-      if (p.fotoCasa)      URL.revokeObjectURL(p.fotoCasa);
-      if (p.fotoINEFrente) URL.revokeObjectURL(p.fotoINEFrente);
-      if (p.fotoINEAtras)  URL.revokeObjectURL(p.fotoINEAtras);
-      return { fotoCasa: null, fotoINEFrente: null, fotoINEAtras: null };
+      if (p.fotoCasa)          URL.revokeObjectURL(p.fotoCasa);
+      if (p.fotoINEFrente)     URL.revokeObjectURL(p.fotoINEFrente);
+      if (p.fotoINEAtras)      URL.revokeObjectURL(p.fotoINEAtras);
+      if (p.fotoPredioNorte)   URL.revokeObjectURL(p.fotoPredioNorte);
+      if (p.fotoPredioSur)     URL.revokeObjectURL(p.fotoPredioSur);
+      if (p.fotoPredioEste)    URL.revokeObjectURL(p.fotoPredioEste);
+      if (p.fotoPredioOeste)   URL.revokeObjectURL(p.fotoPredioOeste);
+      return { fotoCasa: null, fotoINEFrente: null, fotoINEAtras: null, fotoPredioNorte: null, fotoPredioSur: null, fotoPredioEste: null, fotoPredioOeste: null };
     });
     setErrors({});
     localStorage.removeItem(DRAFT_KEY);
@@ -1071,44 +1105,71 @@ export default function Home() {
               );
             })()}
 
-            {/* Fallback selección por lista */}
+            {/* Botón abrir modal de lotes */}
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => setShowLoteList((v) => !v)}
+                onClick={() => setShowLoteModal(true)}
                 className="text-xs text-guinda-600 hover:text-guinda-800 font-medium underline underline-offset-2 transition-colors"
               >
-                {showLoteList ? "Ocultar lista de polígonos" : "¿El mapa no carga? Selecciona de la lista"}
+                ¿No puedes seleccionar en el mapa? Elige aquí
               </button>
             </div>
-            {showLoteList && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
-                  <p className="text-sm font-semibold text-gray-700">Seleccionar polígono de la lista</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Usa el mapa de arriba si puedes — es más preciso</p>
-                </div>
-                <div className="px-5 py-4">
-                  <div className="relative">
-                    <select
-                      value={form.lote}
-                      aria-label="Seleccionar polígono de la lista"
-                      onChange={(e) => {
-                        const found = LOTES.find((l) => l.loteNum === e.target.value);
-                        if (found) {
-                          setForm((p) => ({ ...p, lote: found.loteNum, predio: found.predioNum }));
-                          setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
-                        }
-                      }}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent appearance-none bg-gray-50/50 text-gray-800"
+
+            {/* Modal de selección de lote */}
+            {showLoteModal && (
+              <div
+                className="fixed inset-0 z-50 flex items-end"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Seleccionar polígono"
+              >
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLoteModal(false)} />
+                <div className="relative w-full max-w-lg mx-auto bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col">
+                  <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+                    <div>
+                      <p className="font-bold text-gray-800">Selecciona tu polígono</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Toca el que corresponde a tu predio</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLoteModal(false)}
+                      aria-label="Cerrar"
+                      className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
                     >
-                      <option value="">Elige tu polígono…</option>
-                      {LOTES.filter((l) => l.loteNum).map((l) => (
-                        <option key={l.id} value={l.loteNum}>
-                          Polígono {l.loteNum} — Predio {l.predioNum}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute inset-y-0 right-3 my-auto w-4 h-4 text-gray-400" strokeWidth={2} />
+                      <X className="w-5 h-5" strokeWidth={2} />
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto px-4 py-3 space-y-2">
+                    {LOTES.filter((l) => l.loteNum).map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => {
+                          setForm((p) => ({ ...p, lote: l.loteNum, predio: l.predioNum }));
+                          setErrors((p) => ({ ...p, lote: undefined, predio: undefined }));
+                          setShowLoteModal(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 transition-all text-left ${
+                          form.lote === l.loteNum
+                            ? "border-guinda-400 bg-guinda-50"
+                            : "border-gray-100 bg-gray-50 hover:border-guinda-200 hover:bg-guinda-50/40"
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-xs"
+                          style={{ background: l.color }}>
+                          {l.loteNum.split("-").pop()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-800 truncate">{l.loteNum}</p>
+                          <p className="text-xs text-gray-500 truncate">{l.nombre}</p>
+                          <p className="text-xs text-gray-400">Predio {l.predioNum}</p>
+                        </div>
+                        {form.lote === l.loteNum && (
+                          <Check className="w-5 h-5 text-guinda-600 shrink-0" strokeWidth={2.5} />
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1133,8 +1194,41 @@ export default function Home() {
           </>
         )}
 
-        {/* PASO 7 · Dialecto */}
+        {/* PASO 7 · Fotos del predio */}
         {step === 7 && (
+          <>
+            <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+              <Camera className="w-4 h-4 text-blue-500 shrink-0 mt-px" strokeWidth={2} />
+              <div className="text-xs text-blue-800 leading-relaxed">
+                <p className="font-semibold mb-1">Fotografías del predio (opcional)</p>
+                <p>Toma una foto por cada lado del terreno. Si no puedes, puedes continuar sin ellas.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { field: "fotoPredioNorte" as const, label: "Norte" },
+                { field: "fotoPredioSur"   as const, label: "Sur"   },
+                { field: "fotoPredioEste"  as const, label: "Este"  },
+                { field: "fotoPredioOeste" as const, label: "Oeste" },
+              ]).map(({ field, label }) => (
+                <div key={field}>
+                  <p className="text-[10px] font-bold text-guinda-600 uppercase tracking-widest mb-2">{label}</p>
+                  <PhotoUpload
+                    label={`Foto ${label}`}
+                    icon={<MapPin className="w-5 h-5 text-guinda-600" strokeWidth={1.5} />}
+                    preview={previews[field]}
+                    inputId={`foto-predio-${field}`}
+                    onChange={(f) => handleFile(field, f)}
+                    error={errors[field]}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* PASO 8 · Dialecto */}
+        {step === 8 && (
           <>
             <p className="text-sm text-gray-500 px-1">
               Esta información ayuda al municipio a brindar mejor atención a la comunidad.
@@ -1149,8 +1243,8 @@ export default function Home() {
           </>
         )}
 
-        {/* PASO 8 · Revisión y confirmación */}
-        {step === 8 && (
+        {/* PASO 9 · Revisión y confirmación */}
+        {step === 9 && (
           <>
             <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
               <Info className="w-4 h-4 text-amber-600 mt-px shrink-0" strokeWidth={2} />
@@ -1206,24 +1300,52 @@ export default function Home() {
                   Editar →
                 </button>
               </div>
-              <div className="px-5 py-4 grid grid-cols-3 gap-3">
-                {(["fotoCasa", "fotoINEFrente", "fotoINEAtras"] as const).map((key, i) => {
-                  const label = ["Foto de casa", "INE frente", "INE reverso"][i];
-                  return (
-                    <div key={key} className="flex flex-col items-center gap-1.5">
-                      <p className="text-[10px] text-gray-400 font-medium text-center">{label}</p>
-                      {previews[key] ? (
-                        <div className="relative w-full h-24 rounded-xl overflow-hidden border border-gray-100">
-                          <Image src={previews[key]!} alt={label} fill className="object-cover" unoptimized />
+              <div className="px-5 py-4">
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  {(["fotoCasa", "fotoINEFrente", "fotoINEAtras"] as const).map((key, i) => {
+                    const label = ["Foto de casa", "INE frente", "INE reverso"][i];
+                    return (
+                      <div key={key} className="flex flex-col items-center gap-1.5">
+                        <p className="text-[10px] text-gray-400 font-medium text-center">{label}</p>
+                        {previews[key] ? (
+                          <div className="relative w-full h-20 rounded-xl overflow-hidden border border-gray-100">
+                            <Image src={previews[key]!} alt={label} fill className="object-cover" unoptimized />
+                          </div>
+                        ) : (
+                          <div className="w-full h-20 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                            <p className="text-[10px] text-gray-300">Sin foto</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {(["fotoPredioNorte", "fotoPredioSur", "fotoPredioEste", "fotoPredioOeste"] as const).some((k) => previews[k]) && (
+                  <>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Fotos del predio</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {([
+                        { key: "fotoPredioNorte" as const, label: "Norte" },
+                        { key: "fotoPredioSur"   as const, label: "Sur"   },
+                        { key: "fotoPredioEste"  as const, label: "Este"  },
+                        { key: "fotoPredioOeste" as const, label: "Oeste" },
+                      ]).map(({ key, label }) => (
+                        <div key={key} className="flex flex-col items-center gap-1">
+                          <p className="text-[9px] text-gray-400 font-medium">{label}</p>
+                          {previews[key] ? (
+                            <div className="relative w-full h-16 rounded-lg overflow-hidden border border-gray-100">
+                              <Image src={previews[key]!} alt={label} fill className="object-cover" unoptimized />
+                            </div>
+                          ) : (
+                            <div className="w-full h-16 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                              <p className="text-[9px] text-gray-300">—</p>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="w-full h-24 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
-                          <p className="text-[10px] text-gray-300">Sin foto</p>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  );
-                })}
+                  </>
+                )}
               </div>
             </div>
 
