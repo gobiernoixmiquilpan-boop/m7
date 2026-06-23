@@ -701,11 +701,11 @@ function printLoteReport(
   const temporal = items.length - riego;
   const rows = items.map((s, i) => `<tr style="background:${i % 2 === 0 ? "#fff" : "#f9fafb"}">
     <td>${i + 1}</td>
-    <td><strong>${s.nombreCompleto}</strong></td>
-    <td>${s.comunidad}</td>
-    <td style="font-family:monospace;font-size:9px">${s.curp}</td>
-    <td>${s.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}</td>
-    <td>${s.superficie} m²</td>
+    <td><strong>${escHtml(s.nombreCompleto)}</strong></td>
+    <td>${escHtml(s.comunidad)}</td>
+    <td style="font-family:monospace;font-size:9px">${escHtml(s.curp)}</td>
+    <td>${escHtml(s.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3"))}</td>
+    <td>${escHtml(s.superficie)} m²</td>
     <td>${s.tipoTierra === "riego" ? "Riego" : "Temporal"}</td>
     <td style="color:${SC2[s.status ?? "pendiente"]};font-weight:700">${SL[s.status ?? "pendiente"] ?? "—"}</td>
   </tr>`).join("");
@@ -720,8 +720,8 @@ function printLoteReport(
         <div style="width:14px;height:14px;border-radius:4px;background:${lote.fillColor};border:2px solid ${lote.color};flex-shrink:0"></div>
         <h1>Polígono ${lote.loteNum}</h1>
       </div>
-      <p style="color:#374151;font-size:12px">${lote.nombre}</p>
-      <p style="color:#9ca3af;font-size:10px;margin-top:2px">Predio ${lote.predioNum} · Regularización Capula 2026</p>
+      <p style="color:#374151;font-size:12px">${escHtml(lote.nombre)}</p>
+      <p style="color:#9ca3af;font-size:10px;margin-top:2px">Predio ${escHtml(lote.predioNum)} · Regularización Capula 2026</p>
     </div>
     <div style="text-align:right">
       <p style="font-size:9px;color:#9ca3af">Impreso el ${date}</p>

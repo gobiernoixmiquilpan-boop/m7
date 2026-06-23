@@ -2,7 +2,11 @@ import { createHmac, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "./supabase";
 
-const SECRET = process.env.AUTH_SALT ?? "capula2026";
+const SECRET: string = (() => {
+  const s = process.env.AUTH_SALT;
+  if (!s) throw new Error("AUTH_SALT env var is required");
+  return s;
+})();
 const TTL_MS = 365 * 24 * 60 * 60 * 1000; // 1 año
 
 interface TokenPayload { email: string; jti: string; exp: number }

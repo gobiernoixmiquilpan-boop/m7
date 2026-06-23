@@ -357,8 +357,8 @@ export default function Home() {
 
   async function handleFile(field: "fotoCasa" | "fotoINEFrente" | "fotoINEAtras" | "fotoPredioNorte" | "fotoPredioSur" | "fotoPredioEste" | "fotoPredioOeste", file: File | null) {
     if (!file || compressing) return;
-    if (file.size > 20 * 1024 * 1024) {
-      setErrors((p) => ({ ...p, [field]: "La imagen no puede superar 20 MB" }));
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors((p) => ({ ...p, [field]: "La imagen no puede superar 10 MB" }));
       return;
     }
     setCompressing(true);
@@ -470,6 +470,10 @@ export default function Home() {
       await deletePhoto("fotoCasa");
       await deletePhoto("fotoINEFrente");
       await deletePhoto("fotoINEAtras");
+      await deletePhoto("fotoPredioNorte");
+      await deletePhoto("fotoPredioSur");
+      await deletePhoto("fotoPredioEste");
+      await deletePhoto("fotoPredioOeste");
       setSubmittedId(data.id);
       setSubmitted(true);
       void drainQueue();
