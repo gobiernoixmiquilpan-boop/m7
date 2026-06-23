@@ -71,6 +71,10 @@ interface Submission {
   fotoCasaUrl?: string;
   fotoINEFrenteUrl?: string;
   fotoINEAtrasUrl?: string;
+  fotoPredioNorteUrl?: string;
+  fotoPredioSurUrl?: string;
+  fotoPredioEsteUrl?: string;
+  fotoPredioOesteUrl?: string;
   motivoRechazo?: string;
   notas?: string;
   updated_at?: string;
@@ -264,38 +268,53 @@ function LoteCard({ lote, items, onSelect }: {
   onSelect: (s: Submission) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const PAGE = 5;
   const totalSup = items.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
   const riego = items.filter((s) => s.tipoTierra === "riego").length;
+  const visible = showAll ? items : items.slice(0, PAGE);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50/70 transition-colors text-left"
-      >
-        <div className="w-1 self-stretch rounded-full shrink-0 min-h-[36px]" style={{ background: lote.fillColor }} />
-        <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-center"
-          style={{ background: `${lote.fillColor}20`, border: `1.5px solid ${lote.color}40` }}>
-          <span className="font-black leading-none" style={{ fontSize: 9, color: lote.color }}>
-            {lote.loteNum.length > 6 ? lote.loteNum.slice(0, 5) + "…" : lote.loteNum}
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-800 truncate">{lote.nombre}</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Predio {lote.predioNum} · {totalSup.toFixed(0)} m²
-            {riego > 0 && ` · ${riego} riego`}
-            {(items.length - riego) > 0 && ` · ${items.length - riego} temporal`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right">
-            <span className="text-2xl font-black text-gray-800 tabular-nums">{items.length}</span>
-            <p className="text-[10px] text-gray-400 leading-none">solicitud{items.length !== 1 ? "es" : ""}</p>
+      <div className="flex items-stretch">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex-1 flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50/70 transition-colors text-left min-w-0"
+        >
+          <div className="w-1 self-stretch rounded-full shrink-0 min-h-[36px]" style={{ background: lote.fillColor }} />
+          <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-center"
+            style={{ background: `${lote.fillColor}20`, border: `1.5px solid ${lote.color}40` }}>
+            <span className="font-black leading-none" style={{ fontSize: 9, color: lote.color }}>
+              {lote.loteNum.length > 6 ? lote.loteNum.slice(0, 5) + "…" : lote.loteNum}
+            </span>
           </div>
-          <ChevronDown className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${open ? "rotate-180" : ""}`} strokeWidth={2} />
-        </div>
-      </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-800 truncate">{lote.nombre}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Predio {lote.predioNum} · {totalSup.toFixed(0)} m²
+              {riego > 0 && ` · ${riego} riego`}
+              {(items.length - riego) > 0 && ` · ${items.length - riego} temporal`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="text-right">
+              <span className="text-2xl font-black text-gray-800 tabular-nums">{items.length}</span>
+              <p className="text-[10px] text-gray-400 leading-none">solicitud{items.length !== 1 ? "es" : ""}</p>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${open ? "rotate-180" : ""}`} strokeWidth={2} />
+          </div>
+        </button>
+        {lote.loteNum !== "—" && items.length > 0 && (
+          <button
+            onClick={() => printLoteReport(lote, items)}
+            title="Imprimir reporte de este polígono"
+            aria-label="Imprimir reporte del polígono"
+            className="px-3 border-l border-gray-100 text-gray-300 hover:text-guinda-600 hover:bg-guinda-50 transition-all shrink-0"
+          >
+            <Printer className="w-4 h-4" strokeWidth={2} />
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-1.5 px-4 pb-3 flex-wrap">
         {STATUS_OPTIONS.map((o) => {
@@ -323,7 +342,7 @@ function LoteCard({ lote, items, onSelect }: {
               />
             </div>
           )}
-          {items.map((s) => {
+          {visible.map((s) => {
             const av = avatarCls(s.nombreCompleto);
             return (
               <button key={s.id} onClick={() => onSelect(s)}
@@ -344,6 +363,14 @@ function LoteCard({ lote, items, onSelect }: {
               </button>
             );
           })}
+          {items.length > PAGE && (
+            <button
+              onClick={() => setShowAll((v) => !v)}
+              className="w-full py-3 text-xs font-semibold text-guinda-600 hover:text-guinda-800 hover:bg-guinda-50/40 transition-colors border-t border-gray-50"
+            >
+              {showAll ? "Ver menos" : `Ver ${items.length - PAGE} más`}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -624,6 +651,112 @@ function printCommunitySummary(submissions: Submission[]) {
   w.document.close();
 }
 
+function printLoteReport(
+  lote: Pick<Lote, "id" | "nombre" | "color" | "fillColor" | "loteNum" | "predioNum">,
+  items: Submission[]
+) {
+  const loteObj = LOTES.find((l) => l.loteNum === lote.loteNum);
+  const date = new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+
+  let svgMap = "";
+  if (loteObj) {
+    const W = 560, H = 300, PAD = 24;
+    const coords = loteObj.coords;
+    const lats = coords.map((c) => c[0]);
+    const lngs = coords.map((c) => c[1]);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const ranLat = maxLat - minLat || 0.0001;
+    const ranLng = maxLng - minLng || 0.0001;
+    const scaleX = (W - 2 * PAD) / ranLng;
+    const scaleY = (H - 2 * PAD) / ranLat;
+    const scale = Math.min(scaleX, scaleY);
+    const offX = PAD + ((W - 2 * PAD) - ranLng * scale) / 2;
+    const offY = PAD + ((H - 2 * PAD) - ranLat * scale) / 2;
+    const toXY = (lat: number, lng: number): [number, number] => [
+      offX + (lng - minLng) * scale,
+      H - offY - (lat - minLat) * scale,
+    ];
+    const polyPts = coords.map(([lat, lng]) => toXY(lat, lng).map((v) => v.toFixed(1)).join(",")).join(" ");
+    const SC: Record<string, string> = { pendiente: "#6b7280", revision: "#f59e0b", aprobado: "#10b981", rechazado: "#ef4444" };
+    const markers = items.map((s) => {
+      const [mlat, mlng] = (s.lat && s.lng) ? [s.lat, s.lng] : loteObj.centroid;
+      const [x, y] = toXY(mlat, mlng);
+      const c = SC[s.status ?? "pendiente"] ?? SC.pendiente;
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="${c}" stroke="white" stroke-width="2.5" opacity="0.9"/>`;
+    }).join("");
+    svgMap = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin:auto">
+      <rect width="${W}" height="${H}" rx="8" fill="#e8edf3"/>
+      <polygon points="${polyPts}" fill="${lote.fillColor}55" stroke="${lote.color}" stroke-width="2.5" stroke-linejoin="round"/>
+      ${markers}
+      <text x="${W - 18}" y="22" font-size="11" text-anchor="middle" fill="#444" font-family="system-ui,sans-serif" font-weight="bold">N</text>
+      <path d="M${W - 18},26 L${W - 21},36 L${W - 18},34 L${W - 15},36 Z" fill="#444"/>
+    </svg>`;
+  }
+
+  const SL: Record<string, string> = { pendiente: "Pendiente", revision: "En revisión", aprobado: "Aprobado", rechazado: "Rechazado" };
+  const SC2: Record<string, string> = { pendiente: "#6b7280", revision: "#d97706", aprobado: "#059669", rechazado: "#dc2626" };
+  const totalSup = items.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+  const riego = items.filter((s) => s.tipoTierra === "riego").length;
+  const temporal = items.length - riego;
+  const rows = items.map((s, i) => `<tr style="background:${i % 2 === 0 ? "#fff" : "#f9fafb"}">
+    <td>${i + 1}</td>
+    <td><strong>${s.nombreCompleto}</strong></td>
+    <td>${s.comunidad}</td>
+    <td style="font-family:monospace;font-size:9px">${s.curp}</td>
+    <td>${s.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}</td>
+    <td>${s.superficie} m²</td>
+    <td>${s.tipoTierra === "riego" ? "Riego" : "Temporal"}</td>
+    <td style="color:${SC2[s.status ?? "pendiente"]};font-weight:700">${SL[s.status ?? "pendiente"] ?? "—"}</td>
+  </tr>`).join("");
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
+  <title>Polígono ${lote.loteNum} — Capula 2026</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,-apple-system,sans-serif;font-size:11px;color:#111;padding:28px 32px;background:#fff}h1{font-size:18px;font-weight:900;color:#370916}h2{font-size:11px;font-weight:700;color:#6e112c;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #6e112c}.stats{display:flex;gap:14px;margin:14px 0 18px;flex-wrap:wrap}.stat{background:#f3f4f6;border-radius:8px;padding:8px 14px;min-width:80px}.stat-n{font-size:22px;font-weight:900;color:#111;line-height:1}.stat-l{font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}.map-wrap{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:14px}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#370916;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}td{padding:5px 8px;border-bottom:1px solid #f3f4f6;font-size:10.5px;vertical-align:top}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#555}.leg-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid white;box-shadow:0 0 0 1px #0002}.footer{margin-top:18px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between}@media print{button{display:none!important}@page{margin:1cm}}</style>
+  </head><body>
+  <div class="header">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:14px;height:14px;border-radius:4px;background:${lote.fillColor};border:2px solid ${lote.color};flex-shrink:0"></div>
+        <h1>Polígono ${lote.loteNum}</h1>
+      </div>
+      <p style="color:#374151;font-size:12px">${lote.nombre}</p>
+      <p style="color:#9ca3af;font-size:10px;margin-top:2px">Predio ${lote.predioNum} · Regularización Capula 2026</p>
+    </div>
+    <div style="text-align:right">
+      <p style="font-size:9px;color:#9ca3af">Impreso el ${date}</p>
+      <p style="font-size:9px;color:#9ca3af;margin-top:2px">Contraloría Municipal · Ixmiquilpan</p>
+      <button onclick="window.print()" style="margin-top:8px;padding:5px 12px;background:#6e112c;color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">Imprimir</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n">${items.length}</div><div class="stat-l">Solicitudes</div></div>
+    <div class="stat"><div class="stat-n">${totalSup.toFixed(0)}</div><div class="stat-l">m² totales</div></div>
+    <div class="stat"><div class="stat-n">${riego}</div><div class="stat-l">Riego</div></div>
+    <div class="stat"><div class="stat-n">${temporal}</div><div class="stat-l">Temporal</div></div>
+    <div class="stat"><div class="stat-n">${items.filter((s) => (s.status ?? "pendiente") === "aprobado").length}</div><div class="stat-l">Aprobados</div></div>
+    <div class="stat"><div class="stat-n">${items.filter((s) => (s.status ?? "pendiente") === "pendiente").length}</div><div class="stat-l">Pendientes</div></div>
+  </div>
+  ${svgMap ? `<div class="map-wrap">${svgMap}</div>` : ""}
+  <div class="legend">
+    <span style="font-size:10px;font-weight:700;color:#374151;margin-right:4px">Marcadores:</span>
+    <div class="leg-item"><div class="leg-dot" style="background:#6b7280"></div>Pendiente</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>En revisión</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#10b981"></div>Aprobado</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>Rechazado</div>
+  </div>
+  <h2>Registro de solicitantes</h2>
+  <table><thead><tr><th>#</th><th>Nombre</th><th>Comunidad</th><th>CURP</th><th>Celular</th><th>Superficie</th><th>Tipo</th><th>Estado</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <div class="footer"><span>Documento generado automáticamente · RegulaTierra Capula 2026</span><span>Total: ${items.length} solicitudes · ${totalSup.toFixed(1)} m²</span></div>
+  </body></html>`;
+
+  const win = window.open("", "_blank", "width=920,height=700");
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+}
+
 type HistoryEntry = { id: number; status: string; motivo: string | null; created_at: string };
 
 /* ──────────────────── Detail modal ──────────────────── */
@@ -697,9 +830,13 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
   const mapsUrl = s.lat && s.lng ? `https://maps.google.com/?q=${s.lat},${s.lng}` : null;
 
   const photos = [
-    { path: s.fotoCasaUrl,      label: "Foto de casa" },
-    { path: s.fotoINEFrenteUrl, label: "INE frente" },
-    { path: s.fotoINEAtrasUrl,  label: "INE reverso" },
+    { path: s.fotoCasaUrl,         label: "Foto de casa" },
+    { path: s.fotoINEFrenteUrl,    label: "INE frente" },
+    { path: s.fotoINEAtrasUrl,     label: "INE reverso" },
+    { path: s.fotoPredioNorteUrl,  label: "Predio Norte" },
+    { path: s.fotoPredioSurUrl,    label: "Predio Sur" },
+    { path: s.fotoPredioEsteUrl,   label: "Predio Este" },
+    { path: s.fotoPredioOesteUrl,  label: "Predio Oeste" },
   ];
 
   return (
