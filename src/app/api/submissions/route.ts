@@ -26,7 +26,7 @@ function validatePost(fd: FormData): string | null {
   if (!lote)                                               return "lote requerido";
   if (!["riego", "temporal"].includes(tipoTierra))         return "tipoTierra inválido";
   const supVal = parseFloat(superficie);
-  if (!superficie || isNaN(supVal) || supVal < 0.01 || supVal > 500) return "superficie inválida (debe ser entre 0.01 y 500 ha)";
+  if (!superficie || isNaN(supVal) || supVal < 1 || supVal > 99999) return "superficie inválida (debe ser entre 1 y 99,999 m²)";
   if (!["si", "no"].includes(hablaDialecto))               return "hablaDialecto inválido";
   return null;
 }

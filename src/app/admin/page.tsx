@@ -275,7 +275,7 @@ function LoteCard({ lote, items, onSelect }: {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-800 truncate">{lote.nombre}</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Predio {lote.predioNum} · {totalSup.toFixed(1)} ha
+            Predio {lote.predioNum} · {totalSup.toFixed(0)} m²
             {riego > 0 && ` · ${riego} riego`}
             {(items.length - riego) > 0 && ` · ${items.length - riego} temporal`}
           </p>
@@ -313,7 +313,7 @@ function LoteCard({ lote, items, onSelect }: {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-800 truncate">{s.nombreCompleto}</p>
-                  <p className="text-xs text-gray-400">{s.comunidad} · {s.superficie} ha · {s.tipoTierra === "riego" ? "Riego" : "Temporal"}</p>
+                  <p className="text-xs text-gray-400">{s.comunidad} · {s.superficie} m² · {s.tipoTierra === "riego" ? "Riego" : "Temporal"}</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls(s.status)}`}>
@@ -364,7 +364,7 @@ function LotesView({ submissions, onSelect }: { submissions: Submission[]; onSel
         <div className="w-px h-6 bg-gray-100 shrink-0" />
         <div className="flex items-baseline gap-1.5">
           <span className="text-2xl font-black text-gray-800">{totalSup.toFixed(1)}</span>
-          <span className="text-xs font-medium text-gray-400">hectáreas</span>
+          <span className="text-xs font-medium text-gray-400">m²</span>
         </div>
         {statusTotals.length > 0 && <div className="w-px h-6 bg-gray-100 shrink-0 hidden sm:block" />}
         <div className="flex flex-wrap gap-1.5">
@@ -487,7 +487,7 @@ function printSubmission(s: Submission) {
   ${row("Predio", s.predio)}
   ${row("Polígono", s.lote)}
   ${row("Tipo de tierra", s.tipoTierra === "riego" ? "Riego" : "Temporal")}
-  ${row("Superficie", `${s.superficie} ha`)}
+  ${row("Superficie", `${s.superficie} m²`)}
   ${row("Habla ñhañhu", s.hablaDialecto === "si" ? "Sí" : "No")}
 </table>
 <h2>Ubicación</h2>
@@ -624,7 +624,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
               <span className="text-white/30 text-[10px]">·</span>
               <span className="text-white/50 text-[11px]">{s.comunidad}</span>
               <span className="text-white/30 text-[10px]">·</span>
-              <span className="text-white/50 text-[11px]">{s.superficie} ha</span>
+              <span className="text-white/50 text-[11px]">{s.superficie} m²</span>
             </div>
           </div>
           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${statusCls(s.status)}`}>
@@ -742,7 +742,7 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
             <InfoRow label="Comunidad"  value={s.comunidad} />
             <InfoRow label="Predio"     value={s.predio} />
             <InfoRow label="Polígono"   value={s.lote} mono />
-            <InfoRow label="Superficie" value={`${s.superficie} ha`} />
+            <InfoRow label="Superficie" value={`${s.superficie} m²`} />
             <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0 gap-3">
               <span className="text-xs text-gray-400 font-medium shrink-0">Tipo</span>
               <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${s.tipoTierra === "riego" ? "bg-blue-50 text-blue-700" : "bg-sky-50 text-sky-700"}`}>
@@ -1291,7 +1291,7 @@ export default function AdminPage() {
 
   function exportCSV() {
     const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Polígono",
-      "Tipo", "Superficie (ha)", "Dialecto ñhañhu", "Estado", "Ubicación", "Fecha"];
+      "Tipo", "Superficie (m²)", "Dialecto ñhañhu", "Estado", "Ubicación", "Fecha"];
     const rows = filtered.map((s) => [
       folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio, s.lote,
       s.tipoTierra, s.superficie, s.hablaDialecto, statusLabel(s.status), s.ubicacion,
@@ -1314,7 +1314,7 @@ export default function AdminPage() {
   async function exportXLSX() {
     const XLSX = await import("xlsx");
     const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Polígono",
-      "Tipo", "Superficie (ha)", "Dialecto ñhañhu", "Estado", "Motivo rechazo", "Notas", "Ubicación", "Fecha"];
+      "Tipo", "Superficie (m²)", "Dialecto ñhañhu", "Estado", "Motivo rechazo", "Notas", "Ubicación", "Fecha"];
     const rows = filtered.map((s) => [
       folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio ?? "", s.lote ?? "",
       s.tipoTierra, s.superficie, s.hablaDialecto, statusLabel(s.status),
@@ -1451,7 +1451,7 @@ export default function AdminPage() {
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} strokeWidth={2} />
         </button>
         <button onClick={exportCSV} title="Exportar CSV" aria-label="Exportar a CSV"
-          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+          className="hidden sm:flex w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 items-center justify-center transition-colors">
           <Download className="w-4 h-4" strokeWidth={2} />
         </button>
         <button onClick={exportXLSX} title="Exportar Excel (.xlsx)" aria-label="Exportar a Excel"
@@ -1484,7 +1484,7 @@ export default function AdminPage() {
             )}
           </div>
           {total > 0 && (
-            <div className="flex gap-4 mt-3 pt-3 border-t border-gray-50">
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-gray-50">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                 <span className="text-xs text-gray-500">
@@ -1500,7 +1500,7 @@ export default function AdminPage() {
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-guinda-400 shrink-0" />
                 <span className="text-xs text-gray-500">
-                  <span className="font-bold text-gray-700">{totalSup} ha</span> registradas
+                  <span className="font-bold text-gray-700">{totalSup} m²</span> registradas
                 </span>
               </div>
             </div>
@@ -1520,7 +1520,7 @@ export default function AdminPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <StatCard label="Total solicitudes" value={total}
             icon={<Users className="w-5 h-5" strokeWidth={1.5} />} />
           <StatCard label="Con GPS" value={withGps.length}
@@ -1532,8 +1532,8 @@ export default function AdminPage() {
           <StatCard label="Temporal" value={temporal}
             sub={`${total ? Math.round(temporal / total * 100) : 0}% del total`}
             icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
-          <StatCard label="Superficie total" value={`${totalSup} ha`}
-            sub={`Promedio ${avgSup} ha`}
+          <StatCard label="Superficie total" value={`${totalSup} m²`}
+            sub={`Promedio ${avgSup} m²`}
             icon={<CloudRain className="w-5 h-5" strokeWidth={1.5} />} color="emerald" />
         </div>
 
@@ -1761,17 +1761,18 @@ export default function AdminPage() {
             <div ref={tableRef} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
               {/* Filtros */}
-              <div className="flex flex-wrap items-center gap-2 px-4 py-3.5 border-b border-gray-100 bg-gray-50/60">
-                <div className="relative flex-1 min-w-48">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 px-4 py-3.5 border-b border-gray-100 bg-gray-50/60">
+                <div className="relative sm:flex-1 sm:min-w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" strokeWidth={2} />
-                  <input ref={searchInputRef} type="text" placeholder="Nombre, CURP, celular o folio… ( / )"
+                  <input ref={searchInputRef} type="text" placeholder="Nombre, CURP, celular o folio…"
                     value={draftSearch}
                     onChange={(e) => handleSearch(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Escape") { handleSearch(""); e.currentTarget.blur(); } }}
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-guinda-500 bg-gray-50"
                   />
                 </div>
-                <div className="relative">
+                <div className="flex gap-2 overflow-x-auto sm:contents pb-0.5 sm:pb-0">
+                <div className="relative shrink-0">
                   <select value={filterComunidad}
                     onChange={(e) => { setFilterComunidad(e.target.value); setPage(1); }}
                     className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
@@ -1780,7 +1781,7 @@ export default function AdminPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
                 </div>
-                <div className="relative">
+                <div className="relative shrink-0">
                   <select value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
                     className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
@@ -1789,7 +1790,7 @@ export default function AdminPage() {
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
                 </div>
-                <div className="relative">
+                <div className="relative shrink-0">
                   <select value={filterPeriod}
                     onChange={(e) => { setFilterPeriod(e.target.value); setPage(1); }}
                     className="pl-3 pr-8 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 appearance-none text-gray-700 focus:outline-none focus:ring-2 focus:ring-guinda-500">
@@ -1813,9 +1814,10 @@ export default function AdminPage() {
                   <Archive className="w-3.5 h-3.5" strokeWidth={2} />
                   {showArchived ? "Ver activos" : "Archivados"}
                 </button>
-                <span className="text-xs text-gray-400 shrink-0">
+                <span className="text-xs text-gray-400 shrink-0 flex items-center">
                   {tableTotal} registro{tableTotal !== 1 ? "s" : ""}
                 </span>
+                </div>
               </div>
 
               {loading && tableData.length === 0 ? (
@@ -1854,17 +1856,17 @@ export default function AdminPage() {
                         </th>
                         <th className="text-left text-[11px] font-bold text-gray-400 px-3 py-3.5 whitespace-nowrap uppercase tracking-wider">ID</th>
                         {([
-                          ["Nombre",    "nombreCompleto"],
-                          ["Celular",   "celular"],
-                          ["Comunidad", "comunidad"],
-                          ["Polígono",  "lote"],
-                          ["Tipo",      "tipoTierra"],
-                          ["Sup.",      "superficie"],
-                          ["Estado",    "status"],
-                          ["Fecha",     "timestamp"],
-                        ] as [string, keyof Submission][]).map(([label, key]) => (
+                          ["Nombre",    "nombreCompleto", ""],
+                          ["Celular",   "celular",        "hidden md:table-cell"],
+                          ["Comunidad", "comunidad",      "hidden md:table-cell"],
+                          ["Polígono",  "lote",           "hidden sm:table-cell"],
+                          ["Tipo",      "tipoTierra",     "hidden md:table-cell"],
+                          ["Sup.",      "superficie",     "hidden sm:table-cell"],
+                          ["Estado",    "status",         ""],
+                          ["Fecha",     "timestamp",      "hidden sm:table-cell"],
+                        ] as [string, keyof Submission, string][]).map(([label, key, hideCls]) => (
                           <th key={key} onClick={() => toggleSort(key)}
-                            className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap cursor-pointer hover:text-guinda-700 select-none transition-colors">
+                            className={`text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider px-4 py-3.5 whitespace-nowrap cursor-pointer hover:text-guinda-700 select-none transition-colors ${hideCls}`}>
                             <span className="inline-flex items-center gap-1">
                               {label}
                               {sortKey === key
@@ -1912,23 +1914,23 @@ export default function AdminPage() {
                               <span className="font-semibold text-gray-800 text-sm">{s.nombreCompleto}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-xs font-mono text-gray-400 whitespace-nowrap">
+                          <td className="px-4 py-3.5 text-xs font-mono text-gray-400 whitespace-nowrap hidden md:table-cell">
                             {s.celular.replace(/(\d{3})(\d{3})(\d{4})/, "$1-$2-$3")}
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{s.comunidad}</td>
-                          <td className="px-4 py-3.5 text-xs font-mono text-gray-400 whitespace-nowrap">{s.lote || "—"}</td>
-                          <td className="px-4 py-3.5">
+                          <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap hidden md:table-cell">{s.comunidad}</td>
+                          <td className="px-4 py-3.5 text-xs font-mono text-gray-400 whitespace-nowrap hidden sm:table-cell">{s.lote || "—"}</td>
+                          <td className="px-4 py-3.5 hidden md:table-cell">
                             <span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-full ${s.tipoTierra === "riego" ? "bg-blue-50 text-blue-600" : "bg-sky-50 text-sky-600"}`}>
                               {s.tipoTierra === "riego" ? "Riego" : "Temporal"}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-gray-600 tabular-nums">{s.superficie} ha</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600 tabular-nums hidden sm:table-cell">{s.superficie} m²</td>
                           <td className="px-4 py-3.5">
                             <span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-full ${statusCls(s.status)}`}>
                               {statusLabel(s.status)}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap text-xs">
+                          <td className="px-4 py-3.5 whitespace-nowrap text-xs hidden sm:table-cell">
                             <span className="flex items-center gap-1.5">
                               {isToday && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Registrado hoy" />}
                               <span className={isToday ? "text-emerald-600 font-medium" : "text-gray-400"}>
@@ -1996,7 +1998,7 @@ export default function AdminPage() {
 
       {/* Barra de acción masiva */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2.5 text-white px-4 py-2.5 rounded-2xl shadow-2xl animate-slide-up border border-white/10"
+        <div className="fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[90] flex items-center gap-2 sm:gap-2.5 text-white px-4 py-2.5 rounded-2xl shadow-2xl animate-slide-up border border-white/10"
           style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
           <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1.5 rounded-xl shrink-0">
             <Check className="w-3.5 h-3.5 text-white/70" strokeWidth={2.5} />
@@ -2035,7 +2037,7 @@ export default function AdminPage() {
       )}
 
       {toast && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white whitespace-nowrap pointer-events-none animate-slide-up ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
+        <div className={`fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[100] flex items-center justify-center gap-2 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white pointer-events-none animate-slide-up ${toast.ok ? "bg-emerald-600" : "bg-red-600"}`}>
           {toast.ok
             ? <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
             : <X className="w-4 h-4 shrink-0" strokeWidth={2.5} />}

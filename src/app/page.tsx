@@ -124,8 +124,8 @@ function validateStep(step: number, f: FormData): Partial<Record<keyof FormData,
     if (!f.lote.trim())      e.lote      = "Selecciona tu polígono en el mapa";
     if (!f.tipoTierra)       e.tipoTierra = "Seleccione una opción";
     const sup = parseFloat(f.superficie);
-    if (!f.superficie.trim() || isNaN(sup) || sup < 0.01 || sup > 500)
-      e.superficie = "Debe ser entre 0.01 y 500 ha";
+    if (!f.superficie.trim() || isNaN(sup) || sup < 1 || sup > 99999)
+      e.superficie = "Debe ser entre 1 y 99,999 m²";
   }
   if (step === 7 && !f.hablaDialecto) e.hablaDialecto = "Seleccione una opción";
   return e;
@@ -1116,11 +1116,11 @@ export default function Home() {
                 onChange={(v) => setForm((p) => ({ ...p, tipoTierra: v as "riego" | "temporal" }))}
                 error={errors.tipoTierra} />
             </Card>
-            <Card title="Superficie del predio" hasError={!!errors.superficie}>
-              <TextInput placeholder="Ej: 2.5" value={form.superficie} inputMode="decimal"
+            <Card title="Superficie del polígono" hasError={!!errors.superficie}>
+              <TextInput placeholder="Ej: 2500" value={form.superficie} inputMode="decimal"
                 onChange={(v) => setForm((p) => ({ ...p, superficie: v.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1") }))}
-                error={errors.superficie} suffix="ha" />
-              <p className="text-xs text-gray-400 mt-1.5">Escribe la superficie en hectáreas (ha)</p>
+                error={errors.superficie} suffix="m²" />
+              <p className="text-xs text-gray-400 mt-1.5">Escribe la superficie en metros cuadrados (m²)</p>
             </Card>
           </>
         )}
@@ -1171,7 +1171,7 @@ export default function Home() {
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-700">Datos del predio</p>
+                <p className="text-sm font-semibold text-gray-700">Datos del polígono</p>
                 <button type="button"
                   onClick={() => { setErrors({}); stepDir.current = "back"; setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                   className="text-xs text-guinda-600 hover:text-guinda-800 font-semibold">
@@ -1179,14 +1179,13 @@ export default function Home() {
                 </button>
               </div>
               <div className="px-5 divide-y divide-gray-100">
+                <ReviewRow label="Polígono" value={form.lote} />
+                <ReviewRow label="Tipo" value={form.tipoTierra === "riego" ? "Riego" : "Temporal"} />
+                <ReviewRow label="Superficie" value={`${form.superficie} m²`} />
                 <ReviewRow label="Ubicación" value={form.ubicacion} />
                 {form.lat != null && form.lng != null && (
                   <ReviewRow label="GPS" value={`${form.lat}, ${form.lng}`} mono />
                 )}
-                <ReviewRow label="Predio" value={form.predio} />
-                <ReviewRow label="Polígono" value={form.lote} />
-                <ReviewRow label="Tipo" value={form.tipoTierra === "riego" ? "Riego" : "Temporal"} />
-                <ReviewRow label="Superficie" value={`${form.superficie} ha`} />
               </div>
             </div>
 
