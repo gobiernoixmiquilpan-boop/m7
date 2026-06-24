@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Polygon, Popup, Marker, LayersControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -33,11 +33,10 @@ function makeLabelIcon(text: string, color: string) {
   });
 }
 
-/* ── Controlador dinámico del mapa ── */
-function MapController({ lat, lng, selectedLote }: { lat?: number | null; lng?: number | null; selectedLote?: string }) {
+function MapController({ lat, lng, selectedLotes }: { lat?: number | null; lng?: number | null; selectedLotes?: string[] }) {
   const map = useMap();
+  const prevRef = useRef<string[]>([]);
 
-  // Encuadre inicial a todos los lotes
   useEffect(() => {
     const coords = LOTES.flatMap((l) => l.coords);
     if (coords.length > 0) {
@@ -46,19 +45,22 @@ function MapController({ lat, lng, selectedLote }: { lat?: number | null; lng?: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Volar a GPS cuando llega
   useEffect(() => {
     if (lat && lng) map.flyTo([lat, lng], 16, { duration: 1.1 });
   }, [lat, lng, map]);
 
-  // Volar al lote seleccionado
+  // Volar al último polígono añadido
   useEffect(() => {
-    if (!selectedLote) return;
-    const lote = LOTES.find((l) => l.loteNum === selectedLote);
+    const prev = prevRef.current;
+    const curr = selectedLotes ?? [];
+    const added = curr.find((l) => !prev.includes(l));
+    prevRef.current = curr;
+    if (!added) return;
+    const lote = LOTES.find((l) => l.loteNum === added);
     if (!lote || !lote.coords.length) return;
     const bounds = L.polygon(lote.coords as L.LatLngTuple[]).getBounds();
     map.flyToBounds(bounds, { padding: [36, 36], maxZoom: 17, duration: 0.9 });
-  }, [selectedLote, map]);
+  }, [selectedLotes, map]);
 
   return null;
 }
@@ -66,20 +68,21 @@ function MapController({ lat, lng, selectedLote }: { lat?: number | null; lng?: 
 interface Props {
   lat?: number | null;
   lng?: number | null;
-  selectedLote?: string;
+  selectedLotes?: string[];
   onSelectLote?: (loteNum: string, predioNum: string) => void;
   height?: number;
 }
 
-export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height = 340 }: Props) {
+export default function LotesMap({ lat, lng, selectedLotes, onSelectLote, height = 340 }: Props) {
   const center: [number, number] = [20.510, -99.126];
   const userIcon = makeUserIcon();
-  const selectedLoteObj = LOTES.find((l) => l.loteNum === selectedLote && l.loteNum !== "");
+  const selectedSet = new Set(selectedLotes ?? []);
+  const selectedLoteObjs = LOTES.filter((l) => l.loteNum && selectedSet.has(l.loteNum));
 
   return (
     <div>
       {/* Instrucción cuando no hay lote seleccionado */}
-      {!selectedLote && (
+      {selectedSet.size === 0 && (
         <div style={{
           marginBottom: 8, padding: "7px 12px",
           background: "#fffbeb", border: "1.5px solid #fbbf24",
@@ -100,7 +103,7 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
         scrollWheelZoom={false}
         zoomControl
       >
-        <MapController lat={lat} lng={lng} selectedLote={selectedLote} />
+        <MapController lat={lat} lng={lng} selectedLotes={selectedLotes} />
 
         <LayersControl position="topright">
           <LayersControl.BaseLayer checked name="Mapa">
@@ -119,7 +122,7 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
         </LayersControl>
 
         {LOTES.map((lote) => {
-          const isSelected = selectedLote === lote.loteNum && lote.loteNum !== "";
+          const isSelected = selectedSet.has(lote.loteNum) && lote.loteNum !== "";
           return (
             <Polygon
               key={lote.id}
@@ -178,7 +181,7 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
                         fontSize: 12, fontWeight: 700, cursor: "pointer",
                       }}
                     >
-                      {isSelected ? "✓ Seleccionado" : "Seleccionar este lote"}
+                      {isSelected ? "✓ Quitar selección" : "Seleccionar este lote"}
                     </button>
                   )}
 
@@ -214,37 +217,29 @@ export default function LotesMap({ lat, lng, selectedLote, onSelectLote, height 
       </MapContainer>
 
       {/* Banner de selección activa */}
-      {selectedLoteObj && (
+      {selectedLoteObjs.length > 0 && (
         <div style={{
           margin: "8px 0 4px", padding: "8px 14px",
-          background: `${selectedLoteObj.fillColor}18`,
-          border: `1.5px solid ${selectedLoteObj.color}`,
+          background: "#f0fdf4",
+          border: "1.5px solid #86efac",
           borderRadius: 10, display: "flex", alignItems: "center", gap: 10,
         }}>
-          <div style={{
-            width: 12, height: 12, borderRadius: 3, flexShrink: 0,
-            backgroundColor: selectedLoteObj.fillColor, border: `2px solid ${selectedLoteObj.color}`,
-          }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Seleccionado: </span>
-            <span style={{ fontSize: 12, color: "#111827", fontWeight: 700 }}>
-              {selectedLoteObj.nombre} · Predio {selectedLoteObj.predioNum} · Lote {selectedLoteObj.loteNum}
-            </span>
-          </div>
-          {onSelectLote && (
-            <button
-              onClick={() => onSelectLote("", "")}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9ca3af", padding: 2, lineHeight: 1, flexShrink: 0 }}
-              title="Limpiar selección"
-            >✕</button>
-          )}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span style={{ fontSize: 12, color: "#15803d", fontWeight: 700, flex: 1 }}>
+            {selectedLoteObjs.length === 1
+              ? `${selectedLoteObjs[0].nombre} · Predio ${selectedLoteObjs[0].predioNum} · Lote ${selectedLoteObjs[0].loteNum}`
+              : `${selectedLoteObjs.length} polígonos seleccionados: ${selectedLoteObjs.map((l) => l.loteNum).join(", ")}`
+            }
+          </span>
         </div>
       )}
 
       {/* Leyenda */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: selectedLoteObj ? "4px 0 2px" : "8px 0 2px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: selectedLoteObjs.length > 0 ? "4px 0 2px" : "8px 0 2px" }}>
         {LOTES.filter((l) => l.loteNum).map((lote) => {
-          const isSelected = selectedLote === lote.loteNum;
+          const isSelected = selectedSet.has(lote.loteNum);
           return (
             <button
               key={lote.id}

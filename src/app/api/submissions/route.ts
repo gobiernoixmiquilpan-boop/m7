@@ -144,6 +144,12 @@ export async function POST(req: NextRequest) {
   const UUID_RE  = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const id = (clientId && UUID_RE.test(clientId)) ? clientId : crypto.randomUUID();
 
+  const poligonosRaw = fd.get("poligonos") as string | null;
+  let poligonosJson: unknown = null;
+  if (poligonosRaw) {
+    try { poligonosJson = JSON.parse(poligonosRaw); } catch { /* noop */ }
+  }
+
   const entry: Record<string, unknown> = {
     id,
     timestamp: new Date().toISOString(),
@@ -159,6 +165,7 @@ export async function POST(req: NextRequest) {
     tipoTierra: fd.get("tipoTierra"),
     superficie: fd.get("superficie"),
     hablaDialecto: fd.get("hablaDialecto"),
+    poligonos: poligonosJson,
     status: "pendiente",
   };
 

@@ -101,6 +101,11 @@ create index if not exists idx_revoked_sessions_expiry on revoked_sessions(expir
 -- Limpieza periódica (ejecutar manualmente si crece la tabla):
 -- delete from revoked_sessions where expires_at < now();
 
+-- ─── MIGRACIÓN v6 (polígonos múltiples con lotes por polígono) ──────────────
+-- Ejecutar en Supabase SQL Editor si la tabla ya existe:
+alter table submissions
+  add column if not exists poligonos jsonb;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ADMIN_PASSWORD_HASH: genera el hash con:
 --   Linux/macOS: echo -n "tu-contraseña" | sha256sum
