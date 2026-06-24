@@ -1114,9 +1114,16 @@ export default function Home() {
 
             {/* Mapa de lotes */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
-                <p className="text-sm font-semibold text-gray-700">Selecciona tu polígono en el mapa</p>
-                <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color — puedes seleccionar más de uno</p>
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Selecciona tu polígono en el mapa</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color — puedes elegir más de uno</p>
+                </div>
+                {form.poligonos.length > 0 && (
+                  <span className="shrink-0 text-xs font-bold text-guinda-700 bg-guinda-100 px-2.5 py-1 rounded-full">
+                    {form.poligonos.length} seleccionado{form.poligonos.length > 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
               <div className="p-2">
                 <LotesMapDynamic
@@ -1146,18 +1153,21 @@ export default function Home() {
                   const inputVal = loteNumInputs[pg.loteNum] ?? "";
                   const inputErr = loteNumErrs[pg.loteNum] ?? null;
                   return (
-                    <div key={pg.loteNum} className="rounded-2xl border-2 border-guinda-300 bg-guinda-50/60 p-4">
+                    <div
+                      key={pg.loteNum}
+                      className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+                      style={{ borderLeft: `4px solid ${loteObj?.color ?? "#6e112c"}` }}
+                    >
                       {/* Cabecera del polígono */}
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-3 px-4 py-3">
                         <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-xs"
+                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-black text-white text-[11px]"
                           style={{ background: loteObj?.color ?? "#6e112c" }}
                         >
                           {pg.loteNum.split("-").pop()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-guinda-500 uppercase tracking-widest">Polígono seleccionado</p>
-                          <p className="text-base font-bold text-gray-800 leading-tight">{pg.loteNum}</p>
+                          <p className="text-sm font-bold text-gray-800 leading-tight">{pg.loteNum}</p>
                           <p className="text-xs text-gray-400">Predio {pg.predioNum}</p>
                         </div>
                         <button
@@ -1167,7 +1177,7 @@ export default function Home() {
                             setLoteNumInputs((p) => { const n = { ...p }; delete n[pg.loteNum]; return n; });
                             setLoteNumErrs((p) => { const n = { ...p }; delete n[pg.loteNum]; return n; });
                           }}
-                          className="p-1.5 rounded-xl text-guinda-400 hover:text-guinda-700 hover:bg-guinda-100 transition-all shrink-0"
+                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
                           title="Quitar polígono"
                           aria-label="Quitar polígono"
                         >
@@ -1176,14 +1186,18 @@ export default function Home() {
                       </div>
 
                       {/* Lotes dentro del polígono */}
-                      <div>
-                        <p className="text-xs font-semibold text-gray-600 mb-2">Lotes en este polígono</p>
+                      <div className="px-4 pb-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2 mt-2.5 mb-2">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Lotes en este polígono</p>
+                          <span className="text-[10px] text-gray-400">(opcional)</span>
+                        </div>
                         {pg.lotes.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mb-2">
                             {pg.lotes.map((loteN) => (
                               <span
                                 key={loteN}
-                                className="inline-flex items-center gap-1 bg-guinda-100 text-guinda-800 text-xs font-bold px-2.5 py-1 rounded-full"
+                                className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border"
+                                style={{ background: `${loteObj?.fillColor ?? "#f5e6eb"}55`, borderColor: `${loteObj?.color ?? "#6e112c"}40`, color: loteObj?.color ?? "#6e112c" }}
                               >
                                 {loteN}
                                 <button
@@ -1198,7 +1212,7 @@ export default function Home() {
                                       ),
                                     }))
                                   }
-                                  className="text-guinda-400 hover:text-guinda-800 ml-0.5"
+                                  className="opacity-60 hover:opacity-100 ml-0.5"
                                   aria-label={`Quitar lote ${loteN}`}
                                 >
                                   <X className="w-3 h-3" strokeWidth={2.5} />
@@ -1220,13 +1234,14 @@ export default function Home() {
                             className={`flex-1 min-w-0 text-xs px-3 py-1.5 rounded-lg border font-medium outline-none transition-colors ${
                               inputErr
                                 ? "border-red-400 bg-red-50 text-red-700 placeholder:text-red-300"
-                                : "border-gray-200 bg-white text-gray-800 placeholder:text-gray-400 focus:border-guinda-400"
+                                : "border-gray-200 bg-gray-50 text-gray-800 placeholder:text-gray-400 focus:border-guinda-400 focus:bg-white"
                             }`}
                           />
                           <button
                             type="button"
                             onClick={() => addLoteNum(pg.loteNum, inputVal)}
-                            className="shrink-0 px-3 py-1.5 rounded-lg bg-guinda-700 hover:bg-guinda-800 text-white text-xs font-bold transition-colors"
+                            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-black text-white transition-colors"
+                            style={{ background: loteObj?.color ?? "#6e112c" }}
                           >
                             +
                           </button>

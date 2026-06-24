@@ -52,6 +52,8 @@ const LoteMiniMap = dynamic(() => import("@/components/LoteMiniMap"), {
   ),
 });
 
+interface PoligonoEntry { loteNum: string; predioNum: string; lotes: string[] }
+
 interface Submission {
   id: string;
   timestamp: string;
@@ -68,6 +70,7 @@ interface Submission {
   superficie: string;
   hablaDialecto: string;
   status: string;
+  poligonos?: PoligonoEntry[];
   fotoCasaUrl?: string;
   fotoCasaDerechaUrl?: string;
   fotoCasaAtrasUrl?: string;
@@ -989,8 +992,28 @@ function DetailModal({ s, onClose, onStatusChange, onSaveNotes, onDelete, isArch
           {/* Datos del predio */}
           <InfoSection title="Datos del polígono">
             <InfoRow label="Comunidad"  value={s.comunidad} />
-            <InfoRow label="Predio"     value={s.predio} />
-            <InfoRow label="Polígono"   value={s.lote} mono />
+            {s.poligonos && s.poligonos.length > 0 ? (
+              s.poligonos.map((pg, i) => (
+                <div key={pg.loteNum} className="py-2.5 border-b border-gray-100/80 last:border-0">
+                  <div className="flex items-center justify-between gap-3 mb-0.5">
+                    <span className="text-xs text-gray-400 font-medium shrink-0">Polígono {i + 1}</span>
+                    <span className="text-xs font-mono font-bold text-gray-800">{pg.loteNum} · Predio {pg.predioNum}</span>
+                  </div>
+                  {pg.lotes.length > 0 && (
+                    <div className="flex justify-end gap-1 flex-wrap mt-1">
+                      {pg.lotes.map((n) => (
+                        <span key={n} className="text-[10px] font-bold bg-guinda-50 text-guinda-700 px-2 py-0.5 rounded-full border border-guinda-200">{n}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <>
+                <InfoRow label="Predio"   value={s.predio} />
+                <InfoRow label="Polígono" value={s.lote} mono />
+              </>
+            )}
             <InfoRow label="Superficie" value={`${s.superficie} m²`} />
             <div className="flex items-center justify-between py-2.5 border-b border-gray-100/80 last:border-0 gap-3">
               <span className="text-xs text-gray-400 font-medium shrink-0">Tipo</span>
@@ -1542,7 +1565,7 @@ export default function AdminPage() {
     const headers = ["Folio", "Nombre", "Comunidad", "Celular", "CURP", "Predio", "Polígono",
       "Tipo", "Superficie (m²)", "Dialecto ñhañhu", "Estado", "Ubicación", "Fecha"];
     const rows = filtered.map((s) => [
-      folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio, s.lote,
+      folio(s.id), s.nombreCompleto, s.comunidad, s.celular, s.curp, s.predio ?? "", s.lote ?? "",
       s.tipoTierra, s.superficie, s.hablaDialecto, statusLabel(s.status), s.ubicacion,
       new Date(s.timestamp).toLocaleDateString("es-MX"),
     ]);
