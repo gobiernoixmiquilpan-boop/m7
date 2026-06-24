@@ -202,9 +202,6 @@ export default function Home() {
   const [showSaved,   setShowSaved]   = useState(false);
   const [offline,     setOffline]     = useState(false);
   const [consented,   setConsented]   = useState(false);
-  const [showLoteModal,   setShowLoteModal]   = useState(false);
-  const [loteInput,       setLoteInput]       = useState("");
-  const [loteInputErr,    setLoteInputErr]    = useState(false);
   const [loteNumInputs,   setLoteNumInputs]   = useState<Record<string, string>>({});
   const [loteNumErrs,     setLoteNumErrs]     = useState<Record<string, string | null>>({});
 
@@ -1120,52 +1117,6 @@ export default function Home() {
               <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70">
                 <p className="text-sm font-semibold text-gray-700">Selecciona tu polígono en el mapa</p>
                 <p className="text-xs text-gray-400 mt-0.5">Toca el polígono de color — puedes seleccionar más de uno</p>
-                {/* Ingreso por número de lote */}
-                <div className="flex gap-2 mt-2.5">
-                  <input
-                    type="text"
-                    value={loteInput}
-                    onChange={(e) => { setLoteInput(e.target.value); setLoteInputErr(false); }}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter") return;
-                      const found = LOTES.find((l) => l.loteNum && l.loteNum.toUpperCase() === loteInput.trim().toUpperCase());
-                      if (found) {
-                        if (!form.poligonos.find((p) => p.loteNum === found.loteNum)) {
-                          setForm((p) => ({ ...p, poligonos: [...p.poligonos, { loteNum: found.loteNum, predioNum: found.predioNum, lotes: [] }] }));
-                          setErrors((p) => ({ ...p, poligonos: undefined }));
-                        }
-                        setLoteInput("");
-                        setLoteInputErr(false);
-                      } else {
-                        setLoteInputErr(true);
-                      }
-                    }}
-                    placeholder="Número de lote (ej. 6405-F)"
-                    className={`flex-1 min-w-0 text-xs px-3 py-1.5 rounded-lg border font-medium outline-none transition-colors ${loteInputErr ? "border-red-400 bg-red-50 text-red-700 placeholder:text-red-300" : "border-gray-200 bg-white text-gray-800 placeholder:text-gray-400 focus:border-guinda-400"}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const found = LOTES.find((l) => l.loteNum && l.loteNum.toUpperCase() === loteInput.trim().toUpperCase());
-                      if (found) {
-                        if (!form.poligonos.find((p) => p.loteNum === found.loteNum)) {
-                          setForm((p) => ({ ...p, poligonos: [...p.poligonos, { loteNum: found.loteNum, predioNum: found.predioNum, lotes: [] }] }));
-                          setErrors((p) => ({ ...p, poligonos: undefined }));
-                        }
-                        setLoteInput("");
-                        setLoteInputErr(false);
-                      } else {
-                        setLoteInputErr(true);
-                      }
-                    }}
-                    className="shrink-0 px-3 py-1.5 rounded-lg bg-guinda-700 hover:bg-guinda-800 text-white text-xs font-bold transition-colors"
-                  >
-                    Ir
-                  </button>
-                </div>
-                {loteInputErr && (
-                  <p className="text-[11px] text-red-500 font-medium mt-1">Número de lote no encontrado</p>
-                )}
               </div>
               <div className="p-2">
                 <LotesMapDynamic
@@ -1294,82 +1245,6 @@ export default function Home() {
                 <p className={`text-sm font-medium ${errors.poligonos ? "text-red-500" : "text-gray-400"}`}>
                   {errors.poligonos ?? "Toca tu polígono en el mapa para seleccionarlo"}
                 </p>
-              </div>
-            )}
-
-            {/* Botón abrir modal de lotes */}
-            <button
-              type="button"
-              onClick={() => setShowLoteModal(true)}
-              className="w-full flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 hover:bg-guinda-50 text-guinda-700 font-semibold py-3 rounded-2xl text-sm transition-all"
-            >
-              <Search className="w-4 h-4" strokeWidth={2} />
-              ¿No puedes seleccionar en el mapa? Elige de la lista
-            </button>
-
-            {/* Modal de selección de lote */}
-            {showLoteModal && (
-              <div
-                className="fixed inset-0 z-50 flex items-end"
-                role="dialog"
-                aria-modal="true"
-                aria-label="Seleccionar polígono"
-              >
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLoteModal(false)} />
-                <div className="relative w-full max-w-lg mx-auto bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col">
-                  <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-                    <div>
-                      <p className="font-bold text-gray-800">Selecciona tu polígono</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Toca para agregar o quitar</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowLoteModal(false)}
-                      aria-label="Cerrar"
-                      className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-                    >
-                      <X className="w-5 h-5" strokeWidth={2} />
-                    </button>
-                  </div>
-                  <div className="overflow-y-auto px-4 py-3 space-y-2">
-                    {LOTES.filter((l) => l.loteNum).map((l) => {
-                      const isSelected = !!form.poligonos.find((p) => p.loteNum === l.loteNum);
-                      return (
-                        <button
-                          key={l.id}
-                          type="button"
-                          onClick={() => {
-                            setForm((p) => {
-                              if (p.poligonos.find((x) => x.loteNum === l.loteNum)) {
-                                return { ...p, poligonos: p.poligonos.filter((x) => x.loteNum !== l.loteNum) };
-                              }
-                              return { ...p, poligonos: [...p.poligonos, { loteNum: l.loteNum, predioNum: l.predioNum, lotes: [] }] };
-                            });
-                            setErrors((p) => ({ ...p, poligonos: undefined }));
-                          }}
-                          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 transition-all text-left ${
-                            isSelected
-                              ? "border-guinda-400 bg-guinda-50"
-                              : "border-gray-100 bg-gray-50 hover:border-guinda-200 hover:bg-guinda-50/40"
-                          }`}
-                        >
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-xs"
-                            style={{ background: l.color }}>
-                            {l.loteNum.split("-").pop()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-gray-800 truncate">{l.loteNum}</p>
-                            <p className="text-xs text-gray-500 truncate">{l.nombre}</p>
-                            <p className="text-xs text-gray-400">Predio {l.predioNum}</p>
-                          </div>
-                          {isSelected && (
-                            <Check className="w-5 h-5 text-guinda-600 shrink-0" strokeWidth={2.5} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
             )}
 
