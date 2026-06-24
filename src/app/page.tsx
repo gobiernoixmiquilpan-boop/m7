@@ -261,6 +261,12 @@ export default function Home() {
           if (v !== null && v !== undefined)
             fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
         });
+        // Campos de compatibilidad derivados del primer polígono (requeridos por el API)
+        const firstPg = item.draft.poligonos?.[0];
+        if (firstPg) {
+          fd.append("predio", firstPg.predioNum);
+          fd.append("lote",   firstPg.loteNum);
+        }
         if (item.id) fd.append("id", item.id);
         const fotoCasa          = await getPhoto(`${item.tempId}_fotoCasa`);
         const fotoCasaDerecha   = await getPhoto(`${item.tempId}_fotoCasaDerecha`);
