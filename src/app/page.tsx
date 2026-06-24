@@ -1088,13 +1088,18 @@ export default function Home() {
           <>
             {/* Banner GPS auto-detect */}
             {detectedLote && !form.poligonos.find((p) => p.loteNum === detectedLote.loteNum) && (
-              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3">
-                <MapPin className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-blue-800">Tu GPS detectó un polígono</p>
-                  <p className="text-xs text-blue-600 mt-0.5">
-                    Predio {detectedLote.predioNum} · Polígono {detectedLote.loteNum}
-                  </p>
+              <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200 px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="relative flex w-2.5 h-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-blue-500" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-blue-900">Tu GPS detectó un polígono cercano</p>
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      Predio {detectedLote.predioNum} · Polígono {detectedLote.loteNum}
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1105,9 +1110,10 @@ export default function Home() {
                     }));
                     setErrors((p) => ({ ...p, poligonos: undefined }));
                   }}
-                  className="text-xs font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded-xl transition-all shrink-0"
+                  className="mt-2.5 w-full flex items-center justify-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 py-2 rounded-xl transition-all"
                 >
-                  Usar
+                  <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  Usar este polígono
                 </button>
               </div>
             )}
@@ -1170,6 +1176,9 @@ export default function Home() {
                           <p className="text-sm font-bold text-gray-800 leading-tight">{pg.loteNum}</p>
                           <p className="text-xs text-gray-400">Predio {pg.predioNum}</p>
                         </div>
+                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mr-1">
+                          <Check className="w-3 h-3 text-green-600" strokeWidth={3} />
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -1191,6 +1200,9 @@ export default function Home() {
                           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Lotes en este polígono</p>
                           <span className="text-[10px] text-gray-400">(opcional)</span>
                         </div>
+                        {pg.lotes.length === 0 && (
+                          <p className="text-[11px] text-gray-400 italic mb-2">Sin lotes agregados — puedes continuar sin agregar</p>
+                        )}
                         {pg.lotes.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mb-2">
                             {pg.lotes.map((loteN) => (
@@ -1255,11 +1267,18 @@ export default function Home() {
                 })}
               </div>
             ) : (
-              <div className={`rounded-2xl border-2 border-dashed p-5 flex flex-col items-center gap-2 text-center ${errors.poligonos ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50"}`}>
-                <MapPin className={`w-7 h-7 ${errors.poligonos ? "text-red-300" : "text-gray-300"}`} strokeWidth={1.5} />
-                <p className={`text-sm font-medium ${errors.poligonos ? "text-red-500" : "text-gray-400"}`}>
-                  {errors.poligonos ?? "Toca tu polígono en el mapa para seleccionarlo"}
-                </p>
+              <div className={`rounded-2xl border-2 border-dashed px-5 py-6 flex flex-col items-center gap-3 text-center ${errors.poligonos ? "border-red-300 bg-red-50/40" : "border-gray-200 bg-gray-50/60"}`}>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${errors.poligonos ? "bg-red-100" : "bg-gray-100"}`}>
+                  <MapPin className={`w-6 h-6 ${errors.poligonos ? "text-red-400" : "text-gray-400"}`} strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${errors.poligonos ? "text-red-500" : "text-gray-500"}`}>
+                    {errors.poligonos ?? "Ningún polígono seleccionado"}
+                  </p>
+                  {!errors.poligonos && (
+                    <p className="text-xs text-gray-400 mt-0.5">Toca en el mapa o en la leyenda de colores</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1340,17 +1359,30 @@ export default function Home() {
                 </button>
               </div>
               <div className="px-5 divide-y divide-gray-100">
-                {form.poligonos.map((pg, i) => (
-                  <div key={pg.loteNum} className="py-3">
-                    <p className="text-[10px] font-bold text-guinda-500 uppercase tracking-widest mb-1">
-                      Polígono {i + 1}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-800">{pg.loteNum} · Predio {pg.predioNum}</p>
-                    {pg.lotes.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-0.5">Lotes: {pg.lotes.join(", ")}</p>
-                    )}
-                  </div>
-                ))}
+                {form.poligonos.map((pg, i) => {
+                  const loteObj = LOTES.find((l) => l.loteNum === pg.loteNum);
+                  return (
+                    <div key={pg.loteNum} className="py-3 flex items-start gap-2.5">
+                      <span
+                        className="mt-1 w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: loteObj?.color ?? "#6e112c" }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
+                          Polígono {i + 1}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-800">{pg.loteNum} · Predio {pg.predioNum}</p>
+                        {pg.lotes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {pg.lotes.map((n) => (
+                              <span key={n} className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${loteObj?.fillColor ?? "#f5e6eb"}60`, color: loteObj?.color ?? "#6e112c" }}>{n}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
                 <ReviewRow label="Tipo" value={form.tipoTierra === "riego" ? "Riego" : "Temporal"} />
                 <ReviewRow label="Superficie" value={`${form.superficie} m²`} />
                 <ReviewRow label="Ubicación" value={form.ubicacion} />
