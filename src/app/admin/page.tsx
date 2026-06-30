@@ -12,7 +12,7 @@ import { LOTES, type Lote } from "@/lib/lots";
 import {
   Users, MapPin, Droplets, CloudRain, LogOut, Download,
   Search, ChevronLeft, ChevronRight, ChevronDown, RefreshCw,
-  FileText, MessageCircle, ExternalLink, X, Trash2, Loader2, Printer,
+  FileText, MessageCircle, ExternalLink, X, Loader2, Printer,
   ArrowUp, ArrowDown, ZoomIn, Check, Copy, Layers, BarChart2, Clock,
   Archive, ArchiveRestore,
 } from "lucide-react";
@@ -1506,6 +1506,7 @@ export default function AdminPage() {
     setTableData((prev) => prev.filter((s) => s.id !== id));
     setTableTotal((prev) => Math.max(0, prev - 1));
     if (selected?.id === id) setSelected(null);
+    void fetchData();
   }
 
   async function updateStatus(id: string, status: string, extras?: { motivoRechazo?: string }) {
