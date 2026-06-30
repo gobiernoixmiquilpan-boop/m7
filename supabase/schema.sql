@@ -106,6 +106,15 @@ create index if not exists idx_revoked_sessions_expiry on revoked_sessions(expir
 alter table submissions
   add column if not exists poligonos jsonb;
 
+-- ─── MIGRACIÓN v7 (columnas de fotos faltantes) ──────────────────────────────
+-- La tabla original solo tenía fotoCasaUrl, fotoINEFrenteUrl, fotoINEAtrasUrl.
+-- El código sube 6 fotos; estas 3 columnas faltaban y causaban el error
+-- "could not find ... url ... in the schema cache" al enviar solicitudes.
+alter table submissions
+  add column if not exists "fotoCasaDerechaUrl"   text,
+  add column if not exists "fotoCasaAtrasUrl"      text,
+  add column if not exists "fotoCasaIzquierdaUrl"  text;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ADMIN_PASSWORD_HASH: genera el hash con:
 --   Linux/macOS: echo -n "tu-contraseña" | sha256sum
