@@ -531,8 +531,8 @@ async function printSubmission(s: Submission) {
   .flbl{font-size:6.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;margin-bottom:1px}
   .fnum{font-family:monospace;font-size:12px;font-weight:700;letter-spacing:.08em}
   .st{display:inline-block;padding:2px 10px;border-radius:20px;font-size:8px;font-weight:700;background:#f3f4f6;color:#444;margin-bottom:7px}
-  .cols{display:flex;gap:12px}
-  .cl{flex:0 0 54%}
+  .cols{display:flex;gap:14px}
+  .cl{flex:0 0 50%}
   .cr{flex:1;min-width:0}
   h2{font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6e112c;margin:7px 0 3px;padding-bottom:2px;border-bottom:1px solid #f0e0e6}
   table{width:100%;border-collapse:collapse;margin-bottom:1px}
@@ -540,11 +540,11 @@ async function printSubmission(s: Submission) {
   td.l{color:#888;font-size:7.5px;width:40%;white-space:nowrap}
   td.v{font-size:8.5px;font-weight:500}
   td.m{font-family:monospace;font-size:7.5px;word-break:break-all}
-  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:2px}
-  .pi{display:flex;flex-direction:column;gap:1px}
-  .pl{font-size:6.5px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px}
-  .pi img{width:100%;height:62px;object-fit:cover;border-radius:3px;border:1px solid #e5e7eb;display:block}
-  .pi-empty .ph{width:100%;height:62px;background:#f9fafb;border:1px dashed #d1d5db;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#9ca3af}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  .pi{display:flex;flex-direction:column;gap:3px}
+  .pl{font-size:7px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .pi img{width:100%;height:82px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;display:block}
+  .pi-empty .ph{width:100%;height:82px;background:#f9fafb;border:1px dashed #d1d5db;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#9ca3af}
   .sign{display:flex;gap:24px;margin-top:10px}
   .sb{flex:1;border-top:1px solid #aaa;padding-top:3px;font-size:7.5px;color:#888;text-align:center}
   .ftr{margin-top:7px;padding-top:5px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:7.5px;color:#aaa}
