@@ -1690,48 +1690,52 @@ export default function AdminPage() {
 
   /* ── Stats — siempre sobre submissions sin filtrar para que el dashboard
         muestre totales reales independientemente de los filtros del tab Registros ── */
-  const conItemsCount = LOTES.filter((l) => l.loteNum && submissions.some((s) => s.lote === l.loteNum)).length;
-  const total    = submissions.length;
-  const withGps  = submissions.filter((s) => s.lat && s.lng);
-  const riego    = submissions.filter((s) => s.tipoTierra === "riego").length;
-  const temporal = submissions.filter((s) => s.tipoTierra === "temporal").length;
-  const dialecto = submissions.filter((s) => s.hablaDialecto === "si").length;
-  const totalSupRaw = submissions.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
-  const totalSup = totalSupRaw.toFixed(1);
-  const avgSup   = total ? (totalSupRaw / total).toFixed(2) : "0";
+  const stats = useMemo(() => {
+    const conItemsCount = LOTES.filter((l) => l.loteNum && submissions.some((s) => s.lote === l.loteNum)).length;
+    const total       = submissions.length;
+    const withGps     = submissions.filter((s) => s.lat && s.lng);
+    const riego       = submissions.filter((s) => s.tipoTierra === "riego").length;
+    const temporal    = submissions.filter((s) => s.tipoTierra === "temporal").length;
+    const dialecto    = submissions.filter((s) => s.hablaDialecto === "si").length;
+    const totalSupRaw = submissions.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+    const totalSup    = totalSupRaw.toFixed(1);
+    const avgSup      = total ? (totalSupRaw / total).toFixed(2) : "0";
 
-  const byComunidad = COMUNIDADES.map((c) => ({
-    name: c === "San Pedro Capula" ? "S.P. Capula" : c === "La Huerta de Capula" ? "La Huerta" : c,
-    comunidad: c,
-    solicitudes: submissions.filter((s) => s.comunidad === c).length,
-  })).filter((d) => d.solicitudes > 0);
+    const byComunidad = COMUNIDADES.map((c) => ({
+      name: c === "San Pedro Capula" ? "S.P. Capula" : c === "La Huerta de Capula" ? "La Huerta" : c,
+      comunidad: c,
+      solicitudes: submissions.filter((s) => s.comunidad === c).length,
+    })).filter((d) => d.solicitudes > 0);
 
-  const byLote = LOTES.filter((l) => l.loteNum).map((l) => ({
-    name: l.loteNum,
-    solicitudes: submissions.filter((s) => s.lote === l.loteNum).length,
-    fill: l.fillColor,
-  }));
+    const byLote = LOTES.filter((l) => l.loteNum).map((l) => ({
+      name: l.loteNum,
+      solicitudes: submissions.filter((s) => s.lote === l.loteNum).length,
+      fill: l.fillColor,
+    }));
 
-  const pieTierra   = [{ name: "Riego", value: riego }, { name: "Temporal", value: temporal }];
-  const pieDialecto = [{ name: "Habla", value: dialecto }, { name: "No habla", value: total - dialecto }];
+    const pieTierra   = [{ name: "Riego", value: riego }, { name: "Temporal", value: temporal }];
+    const pieDialecto = [{ name: "Habla", value: dialecto }, { name: "No habla", value: total - dialecto }];
 
-  const byDay = useMemo(() => {
     const now = new Date();
-    const map = new Map<string, number>();
+    const dayMap = new Map<string, number>();
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(now.getDate() - i);
-      map.set(d.toISOString().slice(0, 10), 0);
+      dayMap.set(d.toISOString().slice(0, 10), 0);
     }
     submissions.forEach((s) => {
-      const key = s.timestamp.slice(0, 10);
-      if (map.has(key)) map.set(key, (map.get(key) ?? 0) + 1);
+      const key = (s.timestamp ?? "").slice(0, 10);
+      if (dayMap.has(key)) dayMap.set(key, (dayMap.get(key) ?? 0) + 1);
     });
-    return [...map.entries()].map(([iso, solicitudes]) => ({
+    const byDay = [...dayMap.entries()].map(([iso, solicitudes]) => ({
       date: new Date(iso + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" }),
       solicitudes,
     }));
+
+    return { conItemsCount, total, withGps, riego, temporal, dialecto, totalSup, avgSup, byComunidad, byLote, pieTierra, pieDialecto, byDay };
   }, [submissions]);
+
+  const { conItemsCount, total, withGps, riego, temporal, dialecto, totalSup, avgSup, byComunidad, byLote, pieTierra, pieDialecto, byDay } = stats;
 
   const totalPages = Math.max(1, Math.ceil(tableTotal / PAGE_SIZE));
 
