@@ -1632,14 +1632,15 @@ export default function AdminPage() {
       });
   }, [submissions, filterComunidad, filterStatus, filterPeriod, search, sortKey, sortDir]);
 
-  /* ── Stats (usando filtered para reflejar filtros activos) ── */
+  /* ── Stats — siempre sobre submissions sin filtrar para que el dashboard
+        muestre totales reales independientemente de los filtros del tab Registros ── */
   const conItemsCount = LOTES.filter((l) => l.loteNum && submissions.some((s) => s.lote === l.loteNum)).length;
-  const total    = filtered.length;
-  const withGps  = filtered.filter((s) => s.lat && s.lng);
-  const riego    = filtered.filter((s) => s.tipoTierra === "riego").length;
-  const temporal = filtered.filter((s) => s.tipoTierra === "temporal").length;
-  const dialecto = filtered.filter((s) => s.hablaDialecto === "si").length;
-  const totalSupRaw = filtered.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
+  const total    = submissions.length;
+  const withGps  = submissions.filter((s) => s.lat && s.lng);
+  const riego    = submissions.filter((s) => s.tipoTierra === "riego").length;
+  const temporal = submissions.filter((s) => s.tipoTierra === "temporal").length;
+  const dialecto = submissions.filter((s) => s.hablaDialecto === "si").length;
+  const totalSupRaw = submissions.reduce((a, s) => a + parseFloat(s.superficie || "0"), 0);
   const totalSup = totalSupRaw.toFixed(1);
   const avgSup   = total ? (totalSupRaw / total).toFixed(2) : "0";
 
