@@ -1,5 +1,5 @@
-const CACHE = 'capula-2026-v6';
-const PRECACHE = ['/', '/consulta'];
+const CACHE = 'capula-2026-v8';
+const PRECACHE = ['/', '/consulta', '/offline.html'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -18,15 +18,14 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // No cachear: POST/DELETE, API propia, Supabase
+  // No cachear: mutaciones, API propia, Supabase
   if (
     e.request.method !== 'GET' ||
     url.pathname.startsWith('/api/') ||
     url.hostname.endsWith('.supabase.co')
   ) return;
 
-  // Páginas HTML: network-first (siempre intenta traer la versión más nueva)
-  // Assets estáticos: cache-first (tienen hash en el nombre, no cambian)
+  // Páginas HTML: network-first; fallback a caché o a /offline.html
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)
@@ -37,11 +36,14 @@ self.addEventListener('fetch', (e) => {
           }
           return res;
         })
-        .catch(() => caches.match(e.request))
+        .catch(() =>
+          caches.match(e.request).then((cached) => cached || caches.match('/offline.html'))
+        )
     );
     return;
   }
 
+  // Assets estáticos: cache-first con actualización en background
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const network = fetch(e.request).then((res) => {
@@ -54,4 +56,17 @@ self.addEventListener('fetch', (e) => {
       return cached || network;
     })
   );
+});
+
+// Background Sync: el navegador llama a este evento cuando recupera conexión,
+// incluso si la pestaña estaba cerrada. Notificamos a todos los clientes abiertos
+// para que drenen la cola de solicitudes pendientes.
+self.addEventListener('sync', (e) => {
+  if (e.tag === 'drain-queue') {
+    e.waitUntil(
+      self.clients
+        .matchAll({ includeUncontrolled: true, type: 'window' })
+        .then((clients) => clients.forEach((c) => c.postMessage({ type: 'drain-queue' })))
+    );
+  }
 });

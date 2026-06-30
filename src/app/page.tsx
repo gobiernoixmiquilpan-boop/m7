@@ -93,7 +93,11 @@ const deletePhoto = async (key: string) => {
 };
 
 type DraftFields = Omit<FormData, "fotoCasa" | "fotoCasaDerecha" | "fotoCasaAtras" | "fotoCasaIzquierda" | "fotoINEFrente" | "fotoINEAtras">;
-type QueueItem   = { tempId: string; id: string; draft: DraftFields };
+type QueueItem   = { tempId: string; id: string; draft: DraftFields; retries?: number; savedAt?: number };
+
+const PHOTO_FIELDS = ["fotoCasa", "fotoCasaDerecha", "fotoCasaAtras", "fotoCasaIzquierda", "fotoINEFrente", "fotoINEAtras"] as const;
+const QUEUE_MAX_RETRIES = 5;
+const QUEUE_MAX_AGE_MS  = 7 * 86_400_000;
 
 const STEP_TITLES = [
   "Foto de la casa",
@@ -205,11 +209,14 @@ export default function Home() {
   const [loteNumInputs,   setLoteNumInputs]   = useState<Record<string, string>>({});
   const [loteNumErrs,     setLoteNumErrs]     = useState<Record<string, string | null>>({});
 
+  const [drainedCount, setDrainedCount] = useState(0);
+
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stepDir       = useRef<"forward" | "back">("forward");
   const retryTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraining    = useRef(false);
+  const drainTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Load from localStorage after mount (evita hydration mismatch) ── */
   useEffect(() => {
@@ -244,14 +251,25 @@ export default function Home() {
   }, [form]);
 
   async function drainQueue() {
-    if (isDraining.current) return;
+    if (isDraining.current || !navigator.onLine) return;
     isDraining.current = true;
     let queue: QueueItem[] = [];
     try { queue = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]"); } catch { isDraining.current = false; return; }
     if (queue.length === 0) { isDraining.current = false; return; }
 
+    const cleanPhotos = (tempId: string) =>
+      Promise.allSettled(PHOTO_FIELDS.map((f) => deletePhoto(`${tempId}_${f}`)));
+
     const remaining: QueueItem[] = [];
+    let sent = 0;
+
     for (const item of queue) {
+      // Descarta items con demasiados reintentos o muy antiguos
+      const age = Date.now() - (item.savedAt ?? Date.now());
+      if ((item.retries ?? 0) >= QUEUE_MAX_RETRIES || age > QUEUE_MAX_AGE_MS) {
+        await cleanPhotos(item.tempId);
+        continue;
+      }
       try {
         const fd = new FormData();
         Object.entries(item.draft).forEach(([k, v]) => {
@@ -265,41 +283,24 @@ export default function Home() {
           fd.append("lote",   firstPg.loteNum);
         }
         if (item.id) fd.append("id", item.id);
-        const fotoCasa          = await getPhoto(`${item.tempId}_fotoCasa`);
-        const fotoCasaDerecha   = await getPhoto(`${item.tempId}_fotoCasaDerecha`);
-        const fotoCasaAtras     = await getPhoto(`${item.tempId}_fotoCasaAtras`);
-        const fotoCasaIzquierda = await getPhoto(`${item.tempId}_fotoCasaIzquierda`);
-        const fotoINEFrente = await getPhoto(`${item.tempId}_fotoINEFrente`);
-        const fotoINEAtras  = await getPhoto(`${item.tempId}_fotoINEAtras`);
-        if (fotoCasa)          fd.append("fotoCasa",          fotoCasa);
-        if (fotoCasaDerecha)   fd.append("fotoCasaDerecha",   fotoCasaDerecha);
-        if (fotoCasaAtras)     fd.append("fotoCasaAtras",     fotoCasaAtras);
-        if (fotoCasaIzquierda) fd.append("fotoCasaIzquierda", fotoCasaIzquierda);
-        if (fotoINEFrente) fd.append("fotoINEFrente", fotoINEFrente);
-        if (fotoINEAtras)  fd.append("fotoINEAtras",  fotoINEAtras);
+        for (const f of PHOTO_FIELDS) {
+          const photo = await getPhoto(`${item.tempId}_${f}`);
+          if (photo) fd.append(f, photo);
+        }
 
         const res = await fetch("/api/submissions", { method: "POST", body: fd });
 
-        // 4xx = terminal error (bad data, CURP duplicate, etc.) — drop item from queue
+        // 4xx = error terminal (datos inválidos, CURP duplicada, etc.) — descartar
         if (res.status >= 400 && res.status < 500) {
-          await deletePhoto(`${item.tempId}_fotoCasa`);
-          await deletePhoto(`${item.tempId}_fotoCasaDerecha`);
-          await deletePhoto(`${item.tempId}_fotoCasaAtras`);
-          await deletePhoto(`${item.tempId}_fotoCasaIzquierda`);
-          await deletePhoto(`${item.tempId}_fotoINEFrente`);
-          await deletePhoto(`${item.tempId}_fotoINEAtras`);
+          await cleanPhotos(item.tempId);
           continue;
         }
         if (!res.ok) throw new Error("server_error");
 
-        await deletePhoto(`${item.tempId}_fotoCasa`);
-        await deletePhoto(`${item.tempId}_fotoCasaDerecha`);
-        await deletePhoto(`${item.tempId}_fotoCasaAtras`);
-        await deletePhoto(`${item.tempId}_fotoCasaIzquierda`);
-        await deletePhoto(`${item.tempId}_fotoINEFrente`);
-        await deletePhoto(`${item.tempId}_fotoINEAtras`);
+        await cleanPhotos(item.tempId);
+        sent++;
       } catch {
-        remaining.push(item);
+        remaining.push({ ...item, retries: (item.retries ?? 0) + 1 });
       }
     }
 
@@ -309,6 +310,11 @@ export default function Home() {
       localStorage.setItem(PENDING_KEY, JSON.stringify(remaining));
     }
     setPendingCount(remaining.length);
+    if (sent > 0) {
+      setDrainedCount(sent);
+      if (drainTimer.current) clearTimeout(drainTimer.current);
+      drainTimer.current = setTimeout(() => setDrainedCount(0), 5000);
+    }
     isDraining.current = false;
   }
 
@@ -335,6 +341,19 @@ export default function Home() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (navigator.onLine) drainQueue();
+  }, []);
+
+  /* ── Mensajes del Service Worker (Background Sync trigger) ── */
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    const handler = (e: MessageEvent) => {
+      if ((e.data as { type?: string } | null)?.type === "drain-queue") void drainQueue();
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handler);
+      if (drainTimer.current) clearTimeout(drainTimer.current);
+    };
   }, []);
 
   /* ── Advertencia al cerrar con datos sin enviar ── */
@@ -480,9 +499,18 @@ export default function Home() {
           if (a)        await savePhoto(`${tempId}_fotoINEFrente`, a);
           if (b)        await savePhoto(`${tempId}_fotoINEAtras`, b);
           const queue: QueueItem[] = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
-          queue.push({ tempId, id: offlineId, draft });
+          queue.push({ tempId, id: offlineId, draft, retries: 0, savedAt: Date.now() });
           localStorage.setItem(PENDING_KEY, JSON.stringify(queue));
           setPendingCount(queue.length);
+          // Registrar Background Sync para que el navegador reintente en background
+          if ("serviceWorker" in navigator && "SyncManager" in window) {
+            navigator.serviceWorker.ready
+              .then((reg) => {
+                type SWWithSync = ServiceWorkerRegistration & { sync: { register(tag: string): Promise<void> } };
+                return (reg as SWWithSync).sync.register("drain-queue");
+              })
+              .catch(() => { /* noop — navegador sin soporte o SW no activo */ });
+          }
         } catch { /* noop */ }
         localStorage.removeItem(DRAFT_KEY);
         setSubmittedOfflineId(offlineId);
@@ -772,6 +800,14 @@ export default function Home() {
               </div>
             </div>
           )}
+          {drainedCount > 0 && (
+            <div className="w-full flex items-center gap-2 bg-emerald-50 border border-emerald-300 rounded-2xl px-4 py-3">
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2.5} />
+              <p className="text-xs text-emerald-800 font-medium">
+                {drainedCount} solicitud{drainedCount > 1 ? "es enviadas" : " enviada"} correctamente
+              </p>
+            </div>
+          )}
           {pendingCount > 0 && !offline && (
             <div className="w-full flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
               <Check className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2.5} />
@@ -911,7 +947,15 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Banner cola pendiente ── */}
+      {/* ── Banner cola pendiente / éxito sincronización ── */}
+      {drainedCount > 0 && (
+        <div className="bg-emerald-50 border-b border-emerald-300 px-4 py-2.5 flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2.5} />
+          <p className="text-xs text-emerald-800 font-medium">
+            {drainedCount} solicitud{drainedCount > 1 ? "es enviadas" : " enviada"} correctamente
+          </p>
+        </div>
+      )}
       {pendingCount > 0 && !offline && (
         <div className="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 flex items-center gap-2">
           <Check className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2.5} />
