@@ -480,75 +480,131 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function printSubmission(s: Submission) {
-  const f = `CAP-2026-${s.id.slice(-6).toUpperCase()}`;
+async function printSubmission(s: Submission) {
+  const f     = `CAP-2026-${s.id.slice(-6).toUpperCase()}`;
   const fecha = new Date(s.timestamp).toLocaleString("es-MX", {
     day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
-  const statusLabel = STATUS_OPTIONS.find((o) => o.value === (s.status ?? "pendiente"))?.label ?? "Pendiente";
+  const sl = STATUS_OPTIONS.find((o) => o.value === (s.status ?? "pendiente"))?.label ?? "Pendiente";
 
-  const row = (label: string, value: string, mono = false) =>
-    `<tr><td class="label">${escHtml(label)}</td><td class="${mono ? "mono" : ""}">${escHtml(value)}</td></tr>`;
+  async function toB64(path?: string): Promise<string | null> {
+    if (!path) return null;
+    try {
+      const res = await fetch(`/api/photo?p=${encodeURIComponent(path)}`);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  }
+
+  const [bCasa, bDer, bAtr, bIzq, bINEF, bINER] = await Promise.all([
+    toB64(s.fotoCasaUrl),
+    toB64(s.fotoCasaDerechaUrl),
+    toB64(s.fotoCasaAtrasUrl),
+    toB64(s.fotoCasaIzquierdaUrl),
+    toB64(s.fotoINEFrenteUrl),
+    toB64(s.fotoINEAtrasUrl),
+  ]);
+
+  const pi = (b64: string | null, lbl: string) => b64
+    ? `<div class="pi"><div class="pl">${lbl}</div><img src="${b64}" alt="${lbl}"/></div>`
+    : `<div class="pi pi-empty"><div class="pl">${lbl}</div><div class="ph">Sin foto</div></div>`;
+
+  const row = (lbl: string, val: string, mono = false) =>
+    `<tr><td class="l">${escHtml(lbl)}</td><td class="${mono ? "m" : "v"}">${escHtml(val)}</td></tr>`;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Solicitud ${escHtml(f)} — RegulaTierra</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;padding:28px}
-  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #6e112c}
-  .org{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-  .title{font-size:18px;font-weight:700;color:#6e112c}
-  .folio-box{background:#6e112c;color:#fff;padding:8px 18px;border-radius:8px;text-align:center}
-  .folio-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
-  .folio-num{font-family:monospace;font-size:17px;font-weight:700;letter-spacing:.1em}
-  .status{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;background:#f3f4f6;color:#444;margin-bottom:18px}
-  h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:16px 0 6px}
-  table{width:100%;border-collapse:collapse;margin-bottom:4px}
-  td{padding:6px 4px;border-bottom:1px solid #eee;vertical-align:top}
-  td.label{color:#888;font-size:11px;width:38%;white-space:nowrap}
-  td.mono{font-family:monospace;font-size:11px;word-break:break-all}
-  .footer{margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:11px;color:#999}
-  .sign{margin-top:36px;display:flex;gap:40px}
-  .sign-box{flex:1;border-top:1px solid #888;padding-top:4px;font-size:11px;color:#888;text-align:center}
+  @page{size:A4 portrait;margin:9mm}
+  body{font-family:Arial,sans-serif;font-size:9px;color:#111;background:#fff}
+  .hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;padding-bottom:6px;border-bottom:2px solid #6e112c}
+  .org{font-size:7.5px;color:#888;text-transform:uppercase;letter-spacing:.07em}
+  .tit{font-size:13px;font-weight:700;color:#6e112c;margin:1px 0}
+  .fbox{background:#6e112c;color:#fff;padding:5px 12px;border-radius:6px;text-align:center;flex-shrink:0}
+  .flbl{font-size:6.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;margin-bottom:1px}
+  .fnum{font-family:monospace;font-size:12px;font-weight:700;letter-spacing:.08em}
+  .st{display:inline-block;padding:2px 10px;border-radius:20px;font-size:8px;font-weight:700;background:#f3f4f6;color:#444;margin-bottom:7px}
+  .cols{display:flex;gap:12px}
+  .cl{flex:0 0 54%}
+  .cr{flex:1;min-width:0}
+  h2{font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6e112c;margin:7px 0 3px;padding-bottom:2px;border-bottom:1px solid #f0e0e6}
+  table{width:100%;border-collapse:collapse;margin-bottom:1px}
+  td{padding:2.5px 2px;border-bottom:1px solid #f5f5f5;vertical-align:top;line-height:1.35}
+  td.l{color:#888;font-size:7.5px;width:40%;white-space:nowrap}
+  td.v{font-size:8.5px;font-weight:500}
+  td.m{font-family:monospace;font-size:7.5px;word-break:break-all}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:2px}
+  .pi{display:flex;flex-direction:column;gap:1px}
+  .pl{font-size:6.5px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px}
+  .pi img{width:100%;height:62px;object-fit:cover;border-radius:3px;border:1px solid #e5e7eb;display:block}
+  .pi-empty .ph{width:100%;height:62px;background:#f9fafb;border:1px dashed #d1d5db;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#9ca3af}
+  .sign{display:flex;gap:24px;margin-top:10px}
+  .sb{flex:1;border-top:1px solid #aaa;padding-top:3px;font-size:7.5px;color:#888;text-align:center}
+  .ftr{margin-top:7px;padding-top:5px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:7.5px;color:#aaa}
   @media print{button{display:none!important}}
 </style></head><body>
-<div class="header">
+<div class="hdr">
   <div>
     <div class="org">Contraloría Municipal · Ixmiquilpan</div>
-    <div class="title">Solicitud de Regularización de Tierras</div>
-    <div class="org" style="margin-top:3px">Capula 2026</div>
+    <div class="tit">Solicitud de Regularización de Tierras</div>
+    <div class="org" style="margin-top:1px">Regularización Capula 2026</div>
   </div>
-  <div class="folio-box">
-    <div class="folio-lbl">Folio</div>
-    <div class="folio-num">${escHtml(f)}</div>
+  <div class="fbox">
+    <div class="flbl">Folio</div>
+    <div class="fnum">${escHtml(f)}</div>
   </div>
 </div>
-<span class="status">Estado: ${escHtml(statusLabel)}</span>
-<h2>Datos del solicitante</h2>
-<table>
-  ${row("Nombre completo", s.nombreCompleto)}
-  ${row("CURP", s.curp, true)}
-  ${row("Celular", s.celular)}
-</table>
-<h2>Datos del polígono</h2>
-<table>
-  ${row("Comunidad", s.comunidad)}
-  ${row("Predio", s.predio)}
-  ${row("Polígono", s.lote)}
-  ${row("Tipo de tierra", s.tipoTierra === "riego" ? "Riego" : "Temporal")}
-  ${row("Superficie", `${s.superficie} m²`)}
-  ${row("Habla ñhañhu", s.hablaDialecto === "si" ? "Sí" : "No")}
-</table>
-<h2>Ubicación</h2>
-<table>
-  ${row("Dirección / referencia", s.ubicacion)}
-  ${s.lat && s.lng ? row("Coordenadas", `${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}`) : ""}
-</table>
+<span class="st">Estado: ${escHtml(sl)}</span>
+<div class="cols">
+  <div class="cl">
+    <h2>Datos del solicitante</h2>
+    <table>
+      ${row("Nombre completo", s.nombreCompleto)}
+      ${row("CURP", s.curp, true)}
+      ${row("Celular", s.celular)}
+      ${row("Habla ñhañhu", s.hablaDialecto === "si" ? "Sí" : "No")}
+    </table>
+    <h2>Datos del polígono</h2>
+    <table>
+      ${row("Comunidad", s.comunidad)}
+      ${row("Predio", s.predio)}
+      ${row("Polígono", s.lote)}
+      ${row("Tipo de tierra", s.tipoTierra === "riego" ? "Riego" : "Temporal")}
+      ${row("Superficie", `${s.superficie} m²`)}
+    </table>
+    <h2>Ubicación</h2>
+    <table>
+      ${row("Dirección / referencia", s.ubicacion)}
+      ${s.lat && s.lng ? row("Coordenadas GPS", `${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}`) : ""}
+    </table>
+  </div>
+  <div class="cr">
+    <h2>Fotografías de la vivienda</h2>
+    <div class="pgrid">
+      ${pi(bCasa,  "Frente")}
+      ${pi(bDer,   "Derecha")}
+      ${pi(bAtr,   "Atrás")}
+      ${pi(bIzq,   "Izquierda")}
+    </div>
+    <h2>Identificación oficial (INE)</h2>
+    <div class="pgrid">
+      ${pi(bINEF, "Frente")}
+      ${pi(bINER, "Reverso")}
+    </div>
+  </div>
+</div>
 <div class="sign">
-  <div class="sign-box">Firma del solicitante</div>
-  <div class="sign-box">Sello y firma del funcionario</div>
+  <div class="sb">Firma del solicitante</div>
+  <div class="sb">Sello y firma del funcionario</div>
 </div>
-<div class="footer">
+<div class="ftr">
   <span>Registrado: ${escHtml(fecha)}</span>
   <span>Folio: ${escHtml(f)}</span>
 </div>
