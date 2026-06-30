@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { withAdminAuth } from "@/lib/auth";
-import { checkAndIncrement } from "@/lib/rateLimit";
 
 const COMUNIDADES_VALIDAS = ["San Pedro Capula", "Capula Centro", "La Huerta de Capula"];
 
@@ -34,17 +33,6 @@ function validatePost(fd: FormData): string | null {
 const VALID_SORT_KEYS = ["timestamp", "nombreCompleto", "comunidad", "status", "superficie", "tipoTierra"] as const;
 type SortKey = typeof VALID_SORT_KEYS[number];
 
-const POST_LIMIT  = 3;
-const POST_WINDOW = 60 * 60 * 1000;
-
-function getIp(req: NextRequest): string {
-  return (
-    req.headers.get("x-vercel-forwarded-for") ??
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
 
 export async function GET(req: NextRequest) {
   return withAdminAuth(req, async () => {
@@ -110,14 +98,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = getIp(req);
-  if (!(await checkAndIncrement(`post:${ip}`, POST_LIMIT, POST_WINDOW))) {
-    return NextResponse.json(
-      { error: "Demasiados envíos. Intenta de nuevo en una hora." },
-      { status: 429 }
-    );
-  }
-
   const fd = await req.formData();
 
   const validationError = validatePost(fd);
