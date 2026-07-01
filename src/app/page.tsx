@@ -29,7 +29,6 @@ import {
   X, Copy, MessageCircle, QrCode,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import SplashScreen from "@/components/SplashScreen";
 
 interface FormData {
   fotoCasa: File | null;
@@ -211,7 +210,6 @@ export default function Home() {
   const [loteNumErrs,     setLoteNumErrs]     = useState<Record<string, string | null>>({});
 
   const [drainedCount, setDrainedCount] = useState(0);
-  const [splashDone,   setSplashDone]   = useState(false);
 
   const skipFirstSave = useRef(true);
   const saveTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -602,9 +600,6 @@ export default function Home() {
       { timeout: 35000, enableHighAccuracy: true }
     );
   }
-
-  /* ══ Splash de entrada ══ */
-  if (!splashDone) return <SplashScreen onDone={() => setSplashDone(true)} />;
 
   /* ══ Pantalla de éxito — sin conexión ══ */
   if (submitted && submittedOffline) {
