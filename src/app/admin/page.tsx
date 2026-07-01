@@ -1793,8 +1793,14 @@ export default function AdminPage() {
           </div>
           <p className="text-white/45 text-[11px] mt-0.5 hidden sm:block">Regularización · Capula 2026</p>
         </div>
+        {total > 0 && (
+          <div className="hidden lg:flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5 shrink-0">
+            <span className="text-white/50 text-[11px] font-medium">Registros:</span>
+            <span className="text-white font-black text-sm tabular-nums">{total}</span>
+          </div>
+        )}
         {lastUpdated && (
-          <div className="hidden md:flex items-center gap-1.5 bg-white/10 rounded-lg px-2.5 py-1.5 shrink-0">
+          <div className="hidden md:flex lg:hidden items-center gap-1.5 bg-white/10 rounded-lg px-2.5 py-1.5 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="text-white/70 text-[11px] font-medium">
               {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
@@ -1831,31 +1837,67 @@ export default function AdminPage() {
         </button>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-5 space-y-5 admin-content">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-5 lg:py-8 space-y-5 lg:space-y-6 admin-content">
 
         {/* Bienvenida */}
-        <div className="rounded-2xl overflow-hidden shadow-sm relative border border-guinda-900/20"
+        <div className="rounded-2xl lg:rounded-3xl overflow-hidden shadow-sm relative border border-guinda-900/20"
           style={{ background: "linear-gradient(135deg,#2a0710 0%,#6e112c 55%,#9b1840 100%)" }}>
-          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full pointer-events-none"
+          <div className="absolute -top-8 -right-8 w-40 h-40 lg:w-64 lg:h-64 rounded-full pointer-events-none"
             style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
-          <div className="px-5 py-4 relative">
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full pointer-events-none lg:block"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.04) 0%,transparent 70%)" }} />
+          <div className="px-5 py-4 lg:px-8 lg:py-6 relative">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-0.5">Panel Admin</p>
-                <h2 className="font-black text-white text-base leading-tight">
+                <p className="text-guinda-300 text-[10px] lg:text-xs font-bold uppercase tracking-widest mb-0.5">Panel Admin · Capula 2026</p>
+                <h2 className="font-black text-white text-base lg:text-2xl leading-tight">
                   {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
                 </h2>
                 <p className="text-guinda-400 text-xs mt-0.5">Contraloría Municipal · Ixmiquilpan</p>
               </div>
+              {/* Desktop: métricas clave inline en el banner */}
+              {total > 0 && (
+                <div className="hidden lg:flex items-center gap-8">
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-white tabular-nums leading-none">{total}</p>
+                    <p className="text-[11px] text-guinda-300 font-semibold mt-1 uppercase tracking-wider">Total</p>
+                  </div>
+                  <div className="w-px h-12 bg-white/15" />
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-emerald-300 tabular-nums leading-none">{submissions.filter(s => s.status === "aprobado").length}</p>
+                    <p className="text-[11px] text-guinda-300 font-semibold mt-1 uppercase tracking-wider">Aprobados</p>
+                  </div>
+                  <div className="w-px h-12 bg-white/15" />
+                  <div className="text-center">
+                    <p className="text-4xl font-black text-yellow-300 tabular-nums leading-none">{submissions.filter(s => (s.status ?? "pendiente") === "pendiente").length}</p>
+                    <p className="text-[11px] text-guinda-300 font-semibold mt-1 uppercase tracking-wider">Pendientes</p>
+                  </div>
+                  {lastUpdated && (
+                    <>
+                      <div className="w-px h-12 bg-white/15" />
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <div>
+                          <p className="text-sm font-black text-white leading-none">
+                            {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                          <p className="text-[10px] text-guinda-400 mt-0.5 uppercase tracking-wider">Actualizado</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {/* Mobile: solo hora */}
               {lastUpdated && (
-                <div className="flex items-center gap-1.5 text-[11px] text-guinda-300 shrink-0">
+                <div className="flex lg:hidden items-center gap-1.5 text-[11px] text-guinda-300 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
                 </div>
               )}
             </div>
             {total > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-white/10">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-white/10 lg:hidden">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                   <span className="text-xs text-guinda-300">
@@ -1892,7 +1934,7 @@ export default function AdminPage() {
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
           <StatCard label="Total solicitudes" value={total}
             icon={<Users className="w-5 h-5" strokeWidth={1.5} />} />
           <StatCard label="Con GPS" value={withGps.length}
@@ -1911,7 +1953,7 @@ export default function AdminPage() {
 
         {/* Estadísticas por estado */}
         {total > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
             {STATUS_OPTIONS.map((o) => {
               const count = submissions.filter((s) => (s.status ?? "pendiente") === o.value).length;
               const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -1960,12 +2002,12 @@ export default function AdminPage() {
                 return (
                   <button key={id} onClick={() => changeTab(id)}
                     role="tab" aria-selected={active} aria-label={label}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 lg:py-3 rounded-xl text-xs lg:text-sm font-semibold transition-all duration-200 ${
                       active
                         ? "bg-white text-guinda-800 shadow-md border border-gray-100/80"
                         : "text-gray-500 hover:text-gray-700 hover:bg-white/70"
                     }`}>
-                    <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
+                    <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4" strokeWidth={active ? 2.5 : 2} />
                     <span className="hidden sm:inline">{label}</span>
                     <span className="sm:hidden">{label.split(" ")[0]}</span>
                     {badge !== undefined && (
@@ -2017,7 +2059,8 @@ export default function AdminPage() {
         {/* GRÁFICAS */}
         {mountedTabs.has("graficas") && (
           <div className={activeTab !== "graficas" ? "hidden" : ""}>
-            <div className="space-y-4">
+            <div className="space-y-4 lg:space-y-6">
+              <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-5">
                   <div>
@@ -2114,7 +2157,8 @@ export default function AdminPage() {
                 ) : <p className="text-gray-400 text-sm text-center py-10">Sin datos aún</p>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              </div>{/* end lg:grid-cols-2 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                 {[
                   { title: "Tipo de tierra", data: pieTierra, colors: [G, G3], show: riego + temporal > 0 },
                   { title: "Habla ñhañhu",   data: pieDialecto, colors: [G, G2], show: total > 0 },
