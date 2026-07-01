@@ -456,19 +456,21 @@ function LotesView({ submissions, onSelect }: { submissions: Submission[]; onSel
 function StatCard({ label, value, sub, icon, color = "guinda" }: {
   label: string; value: number | string; sub?: string; icon: React.ReactNode; color?: string;
 }) {
-  const bg     = color === "blue" ? "bg-blue-100"    : color === "emerald" ? "bg-emerald-100"    : "bg-guinda-100";
-  const text   = color === "blue" ? "text-blue-700"  : color === "emerald" ? "text-emerald-700"  : "text-guinda-700";
-  const accent = color === "blue" ? "#3b82f6"        : color === "emerald" ? "#10b981"           : "#6e112c";
-  const gradFrom = color === "blue" ? "rgba(59,130,246,0.04)" : color === "emerald" ? "rgba(16,185,129,0.04)" : "rgba(110,17,44,0.04)";
+  const cfg: Record<string, { accent: string; iconBg: string; iconText: string; glow: string }> = {
+    guinda:  { accent: "#6e112c", iconBg: "bg-guinda-100",  iconText: "text-guinda-700",  glow: "rgba(110,17,44,0.07)"  },
+    blue:    { accent: "#3b82f6", iconBg: "bg-blue-100",    iconText: "text-blue-700",    glow: "rgba(59,130,246,0.07)" },
+    emerald: { accent: "#10b981", iconBg: "bg-emerald-100", iconText: "text-emerald-700", glow: "rgba(16,185,129,0.07)" },
+  };
+  const c = cfg[color] ?? cfg.guinda;
   return (
-    <div className="rounded-2xl shadow-sm p-5 flex items-center gap-4 border border-gray-100/80 border-l-4 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-default bg-white"
-      style={{ borderLeftColor: accent }}>
-      <div className={`w-11 h-11 rounded-xl ${bg} ${text} flex items-center justify-center shrink-0`}>
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-2xl font-black text-gray-800 leading-none">{value}</p>
-        <p className="text-xs text-gray-500 font-medium mt-0.5">{label}</p>
+    <div className="rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 cursor-default"
+      style={{ background: `linear-gradient(135deg,#fff 0%,${c.glow} 100%)`, borderLeft: `3px solid ${c.accent}` }}>
+      <div className="p-4 sm:p-5">
+        <div className={`w-10 h-10 rounded-xl ${c.iconBg} ${c.iconText} flex items-center justify-center mb-3`}>
+          {icon}
+        </div>
+        <p className="text-[1.9rem] font-black text-gray-800 leading-none tabular-nums tracking-tight">{value}</p>
+        <p className="text-xs text-gray-500 font-semibold mt-1.5 leading-snug">{label}</p>
         {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
       </div>
     </div>
@@ -1741,8 +1743,31 @@ export default function AdminPage() {
 
   if (checkingAuth) {
     return (
-      <main className="min-h-screen bg-guinda-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-guinda-600 animate-spin" strokeWidth={1.5} />
+      <main className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+        style={{ background: "linear-gradient(145deg,#2a0710 0%,#6e112c 45%,#9b1840 80%,#7a1535 100%)" }}>
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 65%)" }} />
+        <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle,rgba(255,80,80,0.06) 0%,transparent 70%)" }} />
+        <div className="relative mb-7">
+          <div className="splash-ring absolute inset-0 rounded-3xl pointer-events-none" />
+          <div className="splash-logo w-24 h-24 rounded-3xl bg-white/20 border border-white/30 flex items-center justify-center overflow-hidden shadow-2xl">
+            <Image src="/logo.svg" alt="RegulaTierra" width={60} height={60} priority />
+          </div>
+        </div>
+        <p className="splash-text-1 text-guinda-200 text-[11px] font-bold uppercase tracking-widest mb-2">
+          Contraloría Municipal · Ixmiquilpan
+        </p>
+        <h1 className="splash-text-2 text-[2.4rem] font-black text-white tracking-tight leading-none mb-2">
+          RegulaTierra
+        </h1>
+        <p className="splash-text-3 text-guinda-300 text-sm font-medium mb-8">
+          Panel Administrativo · Capula 2026
+        </p>
+        <div className="w-28 h-[3px] rounded-full bg-white/10 overflow-hidden">
+          <div className="splash-bar h-full rounded-full"
+            style={{ background: "linear-gradient(90deg,rgba(245,179,199,0.6) 0%,rgba(255,255,255,0.7) 100%)" }} />
+        </div>
       </main>
     );
   }
@@ -1752,18 +1777,21 @@ export default function AdminPage() {
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg,#fdf1f4 0%,#f8f7f8 40%,#f1f5f9 100%)" }}>
 
       {/* Header */}
-      <header className="text-white px-4 py-3.5 flex items-center gap-2.5 shadow-lg sticky top-0 z-30"
-        style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 70%,#8b1438 100%)" }}>
+      <header className="text-white px-4 py-3 flex items-center gap-2.5 shadow-xl sticky top-0 z-30 border-b border-white/5"
+        style={{ background: "linear-gradient(135deg,#1e0610 0%,#530d21 35%,#6e112c 65%,#8b1438 100%)" }}>
         <Link href="/" aria-label="Ir al inicio"
-          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0">
+          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-colors shrink-0">
           <ChevronLeft className="w-5 h-5" strokeWidth={2} />
         </Link>
-        <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center overflow-hidden shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
           <Image src="/logo.svg" alt="RegulaTierra" width={26} height={26} />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-black text-sm leading-none tracking-tight">Panel Administrativo</h1>
-          <p className="text-white/50 text-[11px] mt-0.5 hidden sm:block">Regularización · Capula 2026</p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-black text-sm leading-none tracking-tight">Panel Administrativo</h1>
+            <span className="hidden sm:block text-[9px] font-bold uppercase tracking-widest bg-white/10 text-white/60 px-2 py-0.5 rounded-full">Admin</span>
+          </div>
+          <p className="text-white/45 text-[11px] mt-0.5 hidden sm:block">Regularización · Capula 2026</p>
         </div>
         {lastUpdated && (
           <div className="hidden md:flex items-center gap-1.5 bg-white/10 rounded-lg px-2.5 py-1.5 shrink-0">
@@ -1806,43 +1834,49 @@ export default function AdminPage() {
       <div className="max-w-6xl mx-auto px-4 py-5 space-y-5 admin-content">
 
         {/* Bienvenida */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-black text-gray-800 text-base leading-none">
-                {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">Contraloría Municipal · Ixmiquilpan</p>
+        <div className="rounded-2xl overflow-hidden shadow-sm relative border border-guinda-900/20"
+          style={{ background: "linear-gradient(135deg,#2a0710 0%,#6e112c 55%,#9b1840 100%)" }}>
+          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
+          <div className="px-5 py-4 relative">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-0.5">Panel Admin</p>
+                <h2 className="font-black text-white text-base leading-tight">
+                  {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" }).replace(/^\w/, c => c.toUpperCase())}
+                </h2>
+                <p className="text-guinda-400 text-xs mt-0.5">Contraloría Municipal · Ixmiquilpan</p>
+              </div>
+              {lastUpdated && (
+                <div className="flex items-center gap-1.5 text-[11px] text-guinda-300 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
             </div>
-            {lastUpdated && (
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-400 shrink-0 md:hidden">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {lastUpdated.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+            {total > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-white/10">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="text-xs text-guinda-300">
+                    <span className="font-bold text-white">{submissions.filter(s => s.status === "aprobado").length}</span> aprobados
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
+                  <span className="text-xs text-guinda-300">
+                    <span className="font-bold text-white">{submissions.filter(s => (s.status ?? "pendiente") === "pendiente").length}</span> pendientes
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-guinda-300 shrink-0" />
+                  <span className="text-xs text-guinda-300">
+                    <span className="font-bold text-white">{totalSup} m²</span> registradas
+                  </span>
+                </div>
               </div>
             )}
           </div>
-          {total > 0 && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-gray-50">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                <span className="text-xs text-gray-500">
-                  <span className="font-bold text-gray-700">{submissions.filter(s => s.status === "aprobado").length}</span> aprobados
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />
-                <span className="text-xs text-gray-500">
-                  <span className="font-bold text-gray-700">{submissions.filter(s => (s.status ?? "pendiente") === "pendiente").length}</span> pendientes
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-guinda-400 shrink-0" />
-                <span className="text-xs text-gray-500">
-                  <span className="font-bold text-gray-700">{totalSup} m²</span> registradas
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Error de carga */}
@@ -1914,7 +1948,7 @@ export default function AdminPage() {
             lotes:  conItemsCount   > 0 ? conItemsCount    : undefined,
           };
           return (
-            <div className="flex gap-1 bg-gray-100/80 rounded-2xl p-1" role="tablist" aria-label="Vistas del panel">
+            <div className="flex gap-1 rounded-2xl p-1 border border-gray-200/70 shadow-sm" style={{ background: "linear-gradient(135deg,#f8f9fa 0%,#f1f3f5 100%)" }} role="tablist" aria-label="Vistas del panel">
               {([
                 { id: "mapa",    label: "Mapa",      Icon: MapPin    },
                 { id: "lotes",   label: "Por lote",  Icon: Layers    },
@@ -1928,8 +1962,8 @@ export default function AdminPage() {
                     role="tab" aria-selected={active} aria-label={label}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                       active
-                        ? "bg-white text-guinda-800 shadow-sm border border-gray-100"
-                        : "text-gray-500 hover:text-gray-700 hover:bg-white/60"
+                        ? "bg-white text-guinda-800 shadow-md border border-gray-100/80"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-white/70"
                     }`}>
                     <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
                     <span className="hidden sm:inline">{label}</span>

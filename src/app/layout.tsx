@@ -47,6 +47,7 @@ export default function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <style dangerouslySetInnerHTML={{ __html: `#app-splash{position:fixed;inset:0;z-index:9999;background:linear-gradient(145deg,#2a0710 0%,#6e112c 45%,#9b1840 80%,#7a1535 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;}` }} />
       <body className="min-h-full flex flex-col">
         {/* Splash puro CSS — aparece al instante, sin esperar JS */}
         <div id="app-splash" aria-hidden="true">
