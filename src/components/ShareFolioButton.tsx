@@ -28,7 +28,11 @@ export default function ShareFolioButton({ folio }: { folio: string }) {
   return (
     <button
       onClick={share}
-      className="flex items-center justify-center gap-2 border-2 border-guinda-200 hover:border-guinda-400 text-guinda-700 hover:bg-guinda-50 font-bold py-3.5 rounded-2xl text-sm transition-all w-full active:scale-[.98]">
+      className={`flex items-center justify-center gap-2 font-bold py-3.5 rounded-2xl text-sm transition-all w-full active:scale-[.97] border-2 ${
+        copied
+          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+          : "border-guinda-200 hover:border-guinda-300 text-guinda-700 hover:bg-guinda-50/60"
+      }`}>
       {copied
         ? <><Check className="w-4 h-4" strokeWidth={2.5} /> ¡Enlace copiado!</>
         : <><Share2 className="w-4 h-4" strokeWidth={2} /> Compartir estado</>}

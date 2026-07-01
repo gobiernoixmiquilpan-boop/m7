@@ -39,6 +39,56 @@ body {
 ::-webkit-scrollbar-thumb  { background: #d1d5db; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
+/* ── Float para elementos decorativos ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-8px) rotate(2deg); }
+}
+.float { animation: float 5s ease-in-out infinite; }
+.float-slow { animation: float 7s ease-in-out infinite; }
+
+/* ── Bounce-in para iconos de confirmación ── */
+@keyframes bounce-in {
+  0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(4deg);  opacity: 1; }
+  100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
+}
+.bounce-in { animation: bounce-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ── Ring pulse para status ── */
+@keyframes ring-expand {
+  0%   { box-shadow: 0 0 0 0   rgba(139, 20, 56, 0.35); }
+  70%  { box-shadow: 0 0 0 14px rgba(139, 20, 56, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(139, 20, 56, 0);    }
+}
+.ring-pulse { animation: ring-expand 2.2s ease-out infinite; }
+
+@keyframes ring-expand-success {
+  0%   { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0.35); }
+  70%  { box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0);    }
+}
+.ring-pulse-success { animation: ring-expand-success 2.2s ease-out infinite; }
+
+/* ── Texto degradado ── */
+.text-gradient-guinda {
+  background: linear-gradient(135deg, #8b1438 0%, #cc2459 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Shimmer para carga ── */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+.shimmer-bg {
+  background: linear-gradient(90deg, #f5e6eb 25%, #fad9e3 50%, #f5e6eb 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
 /* ── Transición de pasos ── */
 @keyframes step-in-forward {
   from { opacity: 0; transform: translateX(20px); }

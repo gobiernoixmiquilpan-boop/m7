@@ -82,7 +82,7 @@ export default function PrintComprobanteButton({ folio, nombre, comunidad, fecha
       {/* Botón visible en pantalla */}
       <button
         onClick={() => window.print()}
-        className="flex items-center justify-center gap-2 border-2 border-gray-200 hover:border-gray-400 text-gray-600 hover:text-gray-800 hover:bg-gray-50 font-bold py-3.5 rounded-2xl text-sm transition-all w-full active:scale-[.98]">
+        className="flex items-center justify-center gap-2 border-2 border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-50/80 font-bold py-3.5 rounded-2xl text-sm transition-all w-full active:scale-[.97]">
         <Printer className="w-4 h-4" strokeWidth={2} />
         Imprimir comprobante
       </button>

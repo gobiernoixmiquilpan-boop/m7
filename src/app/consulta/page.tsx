@@ -58,11 +58,13 @@ export default function ConsultaPage() {
   }
 
   return (
-    <main className="min-h-screen bg-guinda-50 flex flex-col">
-      <header className="rounded-b-[2rem] shadow-xl" style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
-        <div className="max-w-sm mx-auto px-5 pt-6 pb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">
+    <main className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg,#fdf1f4 0%,#f8f4f8 50%,#f4f4ff 100%)" }}>
+      <header className="rounded-b-[2rem] shadow-2xl" style={{ background: "linear-gradient(145deg,#2a0710 0%,#6e112c 50%,#9b1840 85%,#7a1535 100%)" }}>
+        <div className="max-w-sm mx-auto px-5 pt-6 pb-6 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
+          <div className="flex items-center gap-3 mb-4 relative">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 border border-white/20 flex items-center justify-center shrink-0 overflow-hidden">
               <Image src="/logo.svg" alt="RegulaTierra" width={28} height={28} priority />
             </div>
             <div>
@@ -72,8 +74,8 @@ export default function ConsultaPage() {
               <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
             </div>
           </div>
-          <h1 className="text-xl font-bold text-white">Consultar mi solicitud</h1>
-          <p className="text-guinda-300 text-sm mt-1">Ingresa el folio de tu comprobante</p>
+          <h1 className="text-xl font-black text-white tracking-tight relative">Consultar mi solicitud</h1>
+          <p className="text-guinda-300 text-sm mt-1 relative">Ingresa el folio de tu comprobante</p>
         </div>
       </header>
 
@@ -105,7 +107,8 @@ export default function ConsultaPage() {
               )}
             </div>
             <button type="submit"
-              className="w-full bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+              className="w-full active:scale-[.97] text-white font-bold py-3.5 rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
+              style={{ background: "linear-gradient(135deg,#8b1438 0%,#6e112c 60%,#530d21 100%)", boxShadow: "0 4px 14px rgba(110,17,44,0.35)" }}>
               <Search className="w-4 h-4" strokeWidth={2} /> Consultar estado
             </button>
           </form>

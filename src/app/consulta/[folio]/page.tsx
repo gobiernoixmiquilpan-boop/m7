@@ -101,11 +101,13 @@ export default async function ConsultaFolioPage({
   });
 
   return (
-    <main className="min-h-screen bg-guinda-50 flex flex-col print:bg-white print:min-h-0">
-      <header className="rounded-b-[2rem] shadow-xl print:hidden" style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
-        <div className="max-w-sm mx-auto px-5 pt-6 pb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0 overflow-hidden">
+    <main className="min-h-screen flex flex-col print:bg-white print:min-h-0" style={{ background: "linear-gradient(160deg,#fdf1f4 0%,#f8f4f8 50%,#f4f4ff 100%)" }}>
+      <header className="rounded-b-[2rem] shadow-2xl print:hidden" style={{ background: "linear-gradient(145deg,#2a0710 0%,#6e112c 50%,#9b1840 85%,#7a1535 100%)" }}>
+        <div className="max-w-sm mx-auto px-5 pt-6 pb-6 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
+          <div className="flex items-center gap-3 mb-4 relative">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 border border-white/20 flex items-center justify-center shrink-0 overflow-hidden">
               <Image src="/logo.svg" alt="RegulaTierra" width={28} height={28} priority />
             </div>
             <div>
@@ -115,9 +117,9 @@ export default async function ConsultaFolioPage({
               <p className="text-guinda-300 text-xs mt-0.5">Regularización de Tierras · Capula 2026</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-guinda-300 text-xs font-medium">Folio:</p>
-            <p className="text-white text-sm font-bold font-mono tracking-wider">{folio}</p>
+          <div className="flex items-center gap-2 relative">
+            <p className="text-guinda-400 text-xs font-medium">Folio:</p>
+            <p className="text-white text-sm font-black font-mono tracking-wider">{folio}</p>
           </div>
         </div>
       </header>
@@ -126,17 +128,19 @@ export default async function ConsultaFolioPage({
         <div className="w-full max-w-sm space-y-4">
 
           {/* Estado principal */}
-          <div className={`${s.cardBg} border ${s.cardBorder} rounded-2xl p-6 text-center`}>
-            <div className={`w-16 h-16 ${s.iconBg} rounded-full flex items-center justify-center mx-auto mb-3`}>
-              <Icon className={`w-8 h-8 ${s.iconColor}`} strokeWidth={1.5} />
+          <div className={`${s.cardBg} border ${s.cardBorder} rounded-3xl p-6 text-center shadow-sm`}>
+            <div className="relative inline-flex mb-4">
+              <div className={`w-20 h-20 ${s.iconBg} rounded-full flex items-center justify-center shadow-sm`}>
+                <Icon className={`w-10 h-10 ${s.iconColor}`} strokeWidth={1.5} />
+              </div>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Estado del trámite</p>
-            <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold mb-3 ${s.badge}`}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Estado del trámite</p>
+            <span className={`inline-block px-5 py-1.5 rounded-full text-sm font-black mb-3 ${s.badge}`}>
               {s.label}
             </span>
             <p className="text-sm text-gray-600 leading-relaxed">{s.description}</p>
             {statusKey === "rechazado" && (data.motivoRechazo as string | null) && (
-              <div className="mt-4 bg-red-100 border border-red-200 rounded-xl px-4 py-3 text-left">
+              <div className="mt-4 bg-red-100 border border-red-200 rounded-2xl px-4 py-3 text-left">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Motivo</p>
                 <p className="text-sm text-red-700 leading-relaxed">{data.motivoRechazo as string}</p>
               </div>
@@ -168,28 +172,28 @@ export default async function ConsultaFolioPage({
           {/* Historial de estados */}
           {historial && historial.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-100 bg-gray-50/70 flex items-center gap-2">
-                <History className="w-4 h-4 text-gray-400" strokeWidth={2} />
-                <p className="text-sm font-semibold text-gray-700">Historial del trámite</p>
+              <div className="px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center gap-2">
+                <History className="w-4 h-4 text-guinda-500" strokeWidth={2} />
+                <p className="text-sm font-bold text-gray-700">Historial del trámite</p>
               </div>
               <div className="px-5 py-4">
-                <ol className="relative border-l-2 border-gray-100 space-y-5 ml-2">
+                <ol className="relative border-l-2 border-guinda-100 space-y-5 ml-2">
                   {historial.map((h, i) => {
                     const isLast = i === historial.length - 1;
-                    const labelMap: Record<string, { label: string; dot: string }> = {
-                      pendiente: { label: "Solicitud recibida",  dot: "bg-gray-400"    },
-                      revision:  { label: "En revisión",         dot: "bg-yellow-400"  },
-                      aprobado:  { label: "Aprobado",            dot: "bg-emerald-500" },
-                      rechazado: { label: "No aprobada",         dot: "bg-red-500"     },
+                    const labelMap: Record<string, { label: string; dot: string; text: string }> = {
+                      pendiente: { label: "Solicitud recibida",  dot: "bg-gray-400",    text: isLast ? "text-gray-700" : "text-gray-400" },
+                      revision:  { label: "En revisión",         dot: "bg-yellow-400",  text: isLast ? "text-yellow-700" : "text-gray-400" },
+                      aprobado:  { label: "Aprobado",            dot: "bg-emerald-500", text: isLast ? "text-emerald-700" : "text-gray-400" },
+                      rechazado: { label: "No aprobada",         dot: "bg-red-500",     text: isLast ? "text-red-700" : "text-gray-400" },
                     };
-                    const entry = labelMap[h.status as string] ?? { label: h.status as string, dot: "bg-gray-400" };
+                    const entry = labelMap[h.status as string] ?? { label: h.status as string, dot: "bg-gray-400", text: "text-gray-400" };
                     const fechaH = new Date(h.created_at as string).toLocaleDateString("es-MX", {
                       day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
                     });
                     return (
                       <li key={h.id as number} className="ml-4">
-                        <span className={`absolute -left-[9px] w-4 h-4 rounded-full border-2 border-white ${entry.dot} ${isLast ? "ring-2 ring-offset-1 ring-gray-200" : ""}`} />
-                        <p className={`text-sm font-semibold ${isLast ? "text-gray-800" : "text-gray-500"}`}>{entry.label}</p>
+                        <span className={`absolute -left-[9px] w-4 h-4 rounded-full border-2 border-white ${entry.dot} ${isLast ? "ring-2 ring-offset-1 ring-guinda-100 shadow-sm" : ""}`} />
+                        <p className={`text-sm font-bold ${entry.text}`}>{entry.label}</p>
                         <p className="text-[11px] text-gray-400 mt-0.5">{fechaH}</p>
                         {h.motivo && (
                           <p className="text-xs text-red-600 mt-1 leading-relaxed">{h.motivo as string}</p>
@@ -213,7 +217,8 @@ export default async function ConsultaFolioPage({
           {/* Acciones */}
           <div className="space-y-3 pt-1 print:hidden">
             <Link href="/consulta"
-              className="flex items-center justify-center gap-2 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all w-full">
+              className="flex items-center justify-center gap-2 active:scale-[.97] text-white font-bold py-3.5 rounded-2xl text-sm transition-all w-full"
+              style={{ background: "linear-gradient(135deg,#8b1438 0%,#6e112c 60%,#530d21 100%)", boxShadow: "0 4px 14px rgba(110,17,44,0.35)" }}>
               <Search className="w-4 h-4" strokeWidth={2} /> Consultar otro folio
             </Link>
             <ShareFolioButton folio={folio} />

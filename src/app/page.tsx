@@ -607,26 +607,31 @@ export default function Home() {
       ? `CAP-2026-${submittedOfflineId.slice(-6).toUpperCase()}`
       : null;
     return (
-      <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
-        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center animate-success">
-          <div className="flex items-center justify-center gap-2 mb-5">
+      <main className="min-h-screen flex items-center justify-center p-5" style={{ background: "linear-gradient(160deg,#fefce8 0%,#f8f7f0 50%,#fff7ed 100%)" }}>
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center animate-success border border-amber-100/50">
+          <div className="flex items-center justify-center gap-2 mb-6">
             <div className="w-8 h-8 rounded-xl bg-guinda-100 flex items-center justify-center overflow-hidden shrink-0">
               <Image src="/logo.svg" alt="RegulaTierra" width={22} height={22} />
             </div>
             <span className="text-[11px] text-guinda-600 font-bold uppercase tracking-widest">RegulaTierra</span>
           </div>
-          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <Wifi className="w-10 h-10 text-yellow-500" strokeWidth={1.5} />
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full bg-amber-100" />
+            <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg bounce-in">
+              <Wifi className="w-12 h-12 text-white" strokeWidth={1.5} />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-1">Solicitud guardada</h2>
-          <p className="text-gray-600 text-sm mt-2 leading-relaxed">
-            Sin conexión — se enviará <strong>automáticamente</strong> al recuperar señal.
+          <h2 className="text-2xl font-black text-gray-800 mb-1 tracking-tight">Solicitud guardada</h2>
+          <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
+            Sin conexión — se enviará <strong className="text-gray-700">automáticamente</strong> al recuperar señal.
           </p>
           {offlineFolio && (
-            <div className="mt-4 rounded-2xl px-6 py-4" style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
-              <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1">Folio provisional</p>
-              <p className="text-white text-2xl font-bold font-mono tracking-wider">{offlineFolio}</p>
-              <p className="text-guinda-300 text-[10px] mt-1">Guarda este número para consultar tu estado</p>
+            <div className="mt-4 rounded-2xl px-6 py-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#2a0710 0%,#6e112c 55%,#9b1840 100%)" }}>
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none opacity-20"
+                style={{ background: "radial-gradient(circle,white 0%,transparent 70%)" }} />
+              <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1.5 relative">Folio provisional</p>
+              <p className="text-white text-2xl font-black font-mono tracking-wider relative">{offlineFolio}</p>
+              <p className="text-guinda-400 text-[10px] mt-1.5 relative">Guarda este número para consultar tu estado</p>
             </div>
           )}
           {offlineFolio && (
@@ -669,60 +674,65 @@ export default function Home() {
   if (submitted) {
     const folioNum = `CAP-2026-${submittedId.slice(-6).toUpperCase()}`;
     return (
-      <main className="min-h-screen bg-guinda-50 flex items-center justify-center p-5">
-        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-sm w-full text-center animate-success">
-          <div className="flex items-center justify-center gap-2 mb-5">
+      <main className="min-h-screen flex items-center justify-center p-5" style={{ background: "linear-gradient(160deg,#fdf1f4 0%,#f8f4f8 50%,#f0f4ff 100%)" }}>
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center animate-success border border-guinda-100/50">
+          <div className="flex items-center justify-center gap-2 mb-6">
             <div className="w-8 h-8 rounded-xl bg-guinda-100 flex items-center justify-center overflow-hidden shrink-0">
               <Image src="/logo.svg" alt="RegulaTierra" width={22} height={22} />
             </div>
             <span className="text-[11px] text-guinda-600 font-bold uppercase tracking-widest">RegulaTierra</span>
           </div>
-          <div className="w-20 h-20 bg-guinda-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <CheckCircle className="w-10 h-10 text-guinda-700" strokeWidth={1.5} />
+          <div className="relative w-24 h-24 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full bg-emerald-100 ring-pulse-success" />
+            <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg bounce-in">
+              <CheckCircle className="w-12 h-12 text-white" strokeWidth={1.5} />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-guinda-800 mb-1">¡Solicitud enviada!</h2>
-          <p className="text-gray-600 text-sm mt-2">
-            Gracias, <strong className="text-guinda-700">{form.nombreCompleto}</strong>.
+          <h2 className="text-2xl font-black text-gray-800 mb-1 tracking-tight">¡Solicitud enviada!</h2>
+          <p className="text-gray-500 text-sm mt-1.5">
+            Gracias, <strong className="text-guinda-700">{form.nombreCompleto.split(" ")[0]}</strong>. Tu registro fue recibido.
           </p>
-          <div className="mt-4 rounded-2xl px-6 py-4" style={{ background: "linear-gradient(135deg,#370916 0%,#6e112c 100%)" }}>
-            <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1">Folio de registro</p>
-            <p className="text-white text-2xl font-bold font-mono tracking-wider">{folioNum}</p>
-            <p className="text-guinda-300 text-[10px] mt-1">Guarda este número como comprobante</p>
+          <div className="mt-4 rounded-2xl px-6 py-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#2a0710 0%,#6e112c 55%,#9b1840 100%)" }}>
+            <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full pointer-events-none opacity-20"
+              style={{ background: "radial-gradient(circle,white 0%,transparent 70%)" }} />
+            <p className="text-guinda-300 text-[10px] font-bold uppercase tracking-widest mb-1.5 relative">Folio de registro</p>
+            <p className="text-white text-2xl font-black font-mono tracking-wider relative">{folioNum}</p>
+            <p className="text-guinda-400 text-[10px] mt-1.5 relative">Guarda este número como comprobante</p>
           </div>
           <div className="mt-4 flex flex-col items-center gap-2">
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-guinda-100">
+            <div className="bg-white rounded-2xl p-3 shadow-md border border-guinda-100/60" style={{ boxShadow: "0 4px 20px rgba(110,17,44,0.12)" }}>
               <QRCodeSVG
                 value={`${typeof window !== "undefined" ? window.location.origin : ""}/consulta/${folioNum}`}
                 size={140}
-                fgColor="#6b1022"
+                fgColor="#6e112c"
                 level="M"
               />
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-gray-400">
-              <QrCode className="w-3.5 h-3.5" strokeWidth={2} />
+            <p className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <QrCode className="w-3.5 h-3.5 text-guinda-400" strokeWidth={2} />
               Escanea para consultar tu solicitud
             </p>
           </div>
-          <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-            Nos comunicaremos al número <strong>{form.celular}</strong>.
+          <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
+            Nos comunicaremos al número <strong className="text-gray-700">{form.celular}</strong>.
           </p>
 
           {/* Timeline ¿Qué pasa ahora? */}
-          <div className="mt-4 bg-gray-50 border border-gray-100 rounded-2xl p-4 text-left">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">¿Qué pasa ahora?</p>
+          <div className="mt-4 rounded-2xl p-4 text-left border border-guinda-100/60" style={{ background: "linear-gradient(135deg,#fdf1f4 0%,#fef9fa 100%)" }}>
+            <p className="text-[10px] font-bold text-guinda-400 uppercase tracking-widest mb-4">¿Qué pasa ahora?</p>
             {([
-              { n: "1", title: "Revisión", desc: "El municipio revisa tu documentación." },
-              { n: "2", title: "Validación", desc: "Se verifica la información en campo." },
-              { n: "3", title: "Resultado", desc: "Recibirás respuesta por este número." },
+              { n: "1", title: "Revisión",   desc: "El municipio revisa tu documentación.", color: "bg-guinda-600" },
+              { n: "2", title: "Validación", desc: "Se verifica la información en campo.",   color: "bg-guinda-500" },
+              { n: "3", title: "Resultado",  desc: "Recibirás respuesta por este número.",   color: "bg-guinda-400" },
             ] as const).map((s, i, arr) => (
               <div key={s.n} className="flex gap-3">
                 <div className="flex flex-col items-center shrink-0">
-                  <div className="w-6 h-6 rounded-full bg-guinda-100 text-guinda-700 flex items-center justify-center text-[11px] font-bold">{s.n}</div>
-                  {i < arr.length - 1 && <div className="w-px flex-1 bg-gray-200 my-1" />}
+                  <div className={`w-7 h-7 rounded-full ${s.color} text-white flex items-center justify-center text-[11px] font-black shadow-sm`}>{s.n}</div>
+                  {i < arr.length - 1 && <div className="w-0.5 flex-1 bg-guinda-100 my-1.5" />}
                 </div>
-                <div className={i < arr.length - 1 ? "pb-3" : ""}>
-                  <p className="text-xs font-semibold text-gray-700">{s.title}</p>
-                  <p className="text-xs text-gray-400">{s.desc}</p>
+                <div className={i < arr.length - 1 ? "pb-4" : ""}>
+                  <p className="text-xs font-bold text-gray-700 mt-1">{s.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{s.desc}</p>
                 </div>
               </div>
             ))}
@@ -762,39 +772,56 @@ export default function Home() {
   if (step === 0) {
     return (
       <main className="min-h-screen bg-[#f8f7f8] flex flex-col">
-        <div className="rounded-b-[2.5rem] shadow-xl px-5 pt-12 pb-10 relative overflow-hidden"
-          style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
-          <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full pointer-events-none"
-            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
+        <div className="rounded-b-[2.5rem] shadow-2xl px-5 pt-12 pb-12 relative overflow-hidden"
+          style={{ background: "linear-gradient(145deg,#2a0710 0%,#6e112c 45%,#9b1840 80%,#7a1535 100%)" }}>
+          {/* Orbs decorativos */}
+          <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 65%)" }} />
+          <div className="absolute -bottom-10 -left-16 w-56 h-56 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,100,100,0.07) 0%,transparent 70%)" }} />
+          <div className="absolute top-6 left-8 w-20 h-20 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(255,255,255,0.05) 0%,transparent 70%)" }} />
           <div className="max-w-sm mx-auto flex flex-col items-center text-center relative">
-            <div className="w-20 h-20 rounded-3xl bg-white/15 flex items-center justify-center mb-5 overflow-hidden">
-              <Image src="/logo.svg" alt="RegulaTierra" width={52} height={52} priority />
+            <div className="relative mb-6">
+              <div className="absolute inset-0 rounded-3xl bg-white/10 blur-xl scale-110 pointer-events-none" />
+              <div className="w-22 h-22 rounded-3xl bg-white/20 border border-white/30 flex items-center justify-center overflow-hidden shadow-2xl relative w-[88px] h-[88px]">
+                <Image src="/logo.svg" alt="RegulaTierra" width={56} height={56} priority />
+              </div>
             </div>
-            <p className="text-guinda-200 text-[11px] font-semibold uppercase tracking-widest mb-1">
+            <p className="text-guinda-200 text-[11px] font-semibold uppercase tracking-widest mb-1.5">
               Contraloría Municipal · Ixmiquilpan
             </p>
-            <h1 className="text-2xl font-bold text-white mb-1">RegulaTierra</h1>
-            <p className="text-guinda-300 text-sm">Regularización de Tierras · Capula 2026</p>
+            <h1 className="text-3xl font-black text-white mb-1 tracking-tight">RegulaTierra</h1>
+            <p className="text-guinda-300 text-sm font-medium">Regularización de Tierras · Capula 2026</p>
+            <div className="mt-4 flex items-center gap-2">
+              <div className="h-px flex-1 bg-white/10" />
+              <p className="text-guinda-400 text-[10px] font-semibold uppercase tracking-widest">Programa oficial</p>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
           </div>
         </div>
 
         <div className="flex-1 flex flex-col items-center px-5 pt-8 pb-10 w-full max-w-sm mx-auto space-y-4">
           {hasDraft && (
-            <div className="w-full bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5">
+            <div className="w-full rounded-2xl px-4 py-3.5 border border-amber-200 shadow-sm" style={{ background: "linear-gradient(135deg,#fefce8 0%,#fffbeb 100%)" }}>
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4 text-amber-600 shrink-0" strokeWidth={2} />
-                <p className="text-sm font-semibold text-amber-800">Tienes un borrador guardado</p>
+                <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-amber-600" strokeWidth={2} />
+                </div>
+                <p className="text-sm font-bold text-amber-800">Tienes un borrador guardado</p>
               </div>
-              <p className="text-xs text-amber-700 mb-3">
+              <p className="text-xs text-amber-700 mb-3 pl-9">
                 {form.nombreCompleto ? `Registro de ${form.nombreCompleto.split(" ")[0]}` : "Registro en progreso"} — continúa donde lo dejaste.
               </p>
               <div className="flex gap-2">
                 <button onClick={() => { setHasDraft(false); setStep(1); }}
-                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 rounded-xl transition-all">
+                  className="flex-1 text-white text-xs font-bold py-2.5 rounded-xl transition-all active:scale-[.97]"
+                  style={{ background: "linear-gradient(135deg,#d97706 0%,#b45309 100%)" }}>
                   Continuar
                 </button>
                 <button onClick={discardDraft}
-                  className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl border border-amber-200 text-amber-600 hover:bg-amber-100 transition-all">
+                  className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl border-2 border-amber-200 text-amber-500 hover:bg-amber-100 transition-all"
+                  title="Descartar borrador">
                   <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
                 </button>
               </div>
@@ -825,36 +852,39 @@ export default function Home() {
 
           {/* Requisitos antes de empezar */}
           <div className="w-full slide-up-1">
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2.5 text-center">Qué necesitas</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3 text-center">Qué necesitas</p>
+            <div className="grid grid-cols-2 gap-2.5">
               {([
-                { icon: <CreditCard className="w-4 h-4" strokeWidth={1.5} />, text: "INE vigente" },
-                { icon: <FileText className="w-4 h-4" strokeWidth={1.5} />,   text: "CURP" },
-                { icon: <Camera className="w-4 h-4" strokeWidth={1.5} />,    text: "Fotos de tu casa" },
-                { icon: <MapPin className="w-4 h-4" strokeWidth={1.5} />,    text: "Activar GPS" },
+                { icon: <CreditCard className="w-4 h-4" strokeWidth={2} />, text: "INE vigente",      iconBg: "bg-blue-100",   iconColor: "text-blue-600"   },
+                { icon: <FileText   className="w-4 h-4" strokeWidth={2} />, text: "CURP",             iconBg: "bg-violet-100", iconColor: "text-violet-600" },
+                { icon: <Camera     className="w-4 h-4" strokeWidth={2} />, text: "Fotos de tu casa", iconBg: "bg-amber-100",  iconColor: "text-amber-600"  },
+                { icon: <MapPin     className="w-4 h-4" strokeWidth={2} />, text: "Activar GPS",      iconBg: "bg-emerald-100",iconColor: "text-emerald-600"},
               ] as const).map((item, i) => (
-                <div key={i} className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl px-3 py-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-guinda-100 flex items-center justify-center text-guinda-600 shrink-0">{item.icon}</div>
-                  <p className="text-xs text-gray-600 font-medium">{item.text}</p>
+                <div key={i} className="flex items-center gap-2.5 bg-white border border-gray-100 rounded-2xl px-3.5 py-3 shadow-sm">
+                  <div className={`w-8 h-8 rounded-xl ${item.iconBg} ${item.iconColor} flex items-center justify-center shrink-0`}>{item.icon}</div>
+                  <p className="text-xs text-gray-700 font-semibold leading-tight">{item.text}</p>
                 </div>
               ))}
             </div>
           </div>
 
           <button onClick={() => { stepDir.current = "forward"; setStep(1); }}
-            className="w-full flex items-center gap-4 bg-guinda-700 hover:bg-guinda-800 active:scale-[.98] rounded-2xl px-5 py-5 shadow-md transition-all slide-up-2">
-            <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+            className="w-full flex items-center gap-4 active:scale-[.97] rounded-2xl px-5 py-5 transition-all slide-up-2 relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg,#8b1438 0%,#6e112c 55%,#370916 100%)", boxShadow: "0 8px 24px rgba(55,9,22,0.45), 0 2px 8px rgba(55,9,22,0.3)" }}>
+            <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%)" }} />
+            <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
               <Upload className="w-6 h-6 text-white" strokeWidth={1.5} />
             </div>
             <div className="flex-1 text-left">
               <p className="text-base font-bold text-white">Nueva solicitud</p>
-              <p className="text-xs text-guinda-200 mt-0.5">Registra tu terreno · aprox. 5 minutos</p>
+              <p className="text-xs text-guinda-200 mt-0.5">Registra tu terreno · aprox. 5 min</p>
             </div>
             <ChevronDown className="w-5 h-5 text-guinda-300 -rotate-90 shrink-0" strokeWidth={2} />
           </button>
 
           <Link href="/consulta"
-            className="w-full flex items-center gap-4 bg-white border-2 border-guinda-200 hover:border-guinda-400 hover:bg-guinda-50 active:scale-[.98] rounded-2xl px-5 py-5 shadow-sm transition-all slide-up-3">
+            className="w-full flex items-center gap-4 bg-white border border-guinda-100 hover:border-guinda-300 hover:bg-guinda-50/60 active:scale-[.97] rounded-2xl px-5 py-5 shadow-sm transition-all slide-up-3">
             <div className="w-12 h-12 rounded-2xl bg-guinda-100 flex items-center justify-center shrink-0">
               <Search className="w-6 h-6 text-guinda-700" strokeWidth={1.5} />
             </div>
@@ -890,10 +920,12 @@ export default function Home() {
     <div className="min-h-screen bg-[#f8f7f8] pb-44">
 
       {/* ── Header ── */}
-      <header className="rounded-b-[2rem] shadow-xl relative overflow-hidden"
-        style={{ background: "linear-gradient(145deg,#370916 0%,#6e112c 55%,#8b1438 100%)" }}>
+      <header className="rounded-b-[2rem] shadow-2xl relative overflow-hidden"
+        style={{ background: "linear-gradient(145deg,#2a0710 0%,#6e112c 50%,#9b1840 85%,#7a1535 100%)" }}>
         <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle,rgba(255,255,255,0.06) 0%,transparent 70%)" }} />
+          style={{ background: "radial-gradient(circle,rgba(255,255,255,0.07) 0%,transparent 70%)" }} />
+        <div className="absolute bottom-0 left-0 w-32 h-20 pointer-events-none"
+          style={{ background: "radial-gradient(circle,rgba(255,100,100,0.06) 0%,transparent 70%)" }} />
         <div className="max-w-2xl mx-auto px-5 pt-6 pb-5 relative">
           <div className="flex items-center gap-3 mb-5">
             <button onClick={() => { stepDir.current = "back"; setStep(0); }}
@@ -922,12 +954,17 @@ export default function Home() {
             )}
           </div>
 
-          <p className="text-[11px] text-guinda-400 font-semibold uppercase tracking-widest mb-0.5">
-            Paso {step} de {TOTAL_STEPS} · {Math.round((step / TOTAL_STEPS) * 100)}% completado
-          </p>
-          <h1 className="text-xl font-bold text-white mb-4">{STEP_TITLES[step - 1]}</h1>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-[11px] text-guinda-300 font-semibold uppercase tracking-widest">
+              Paso {step} de {TOTAL_STEPS}
+            </p>
+            <span className="text-[11px] font-black text-white bg-white/15 rounded-full px-2.5 py-0.5 tabular-nums">
+              {Math.round((step / TOTAL_STEPS) * 100)}%
+            </span>
+          </div>
+          <h1 className="text-xl font-black text-white mb-4 tracking-tight">{STEP_TITLES[step - 1]}</h1>
 
-          <div className="flex gap-1" role="list" aria-label="Progreso del formulario">
+          <div className="flex gap-1.5" role="list" aria-label="Progreso del formulario">
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
               const done = i < step - 1;
               const current = i === step - 1;
@@ -938,7 +975,7 @@ export default function Home() {
                   aria-current={current ? "step" : undefined}
                   title={done ? `Volver al paso ${i + 1}: ${STEP_TITLES[i]}` : STEP_TITLES[i]}
                   className={`flex-1 rounded-full transition-all duration-500 ${
-                    current ? "h-2.5 bg-white step-active-glow" : done ? "h-1.5 bg-white/70 hover:bg-white cursor-pointer" : "h-1.5 bg-white/20 cursor-default"
+                    current ? "h-3 bg-white step-active-glow" : done ? "h-2 bg-white/80 hover:bg-white cursor-pointer" : "h-2 bg-white/15 cursor-default"
                   }`}
                 />
               );
@@ -1471,12 +1508,14 @@ export default function Home() {
             <label htmlFor="consent-check"
               className={`flex items-start gap-3 rounded-2xl border-2 px-4 py-4 cursor-pointer transition-all ${
                 consented
-                  ? "border-guinda-400 bg-guinda-50 shadow-sm"
+                  ? "border-guinda-300 shadow-sm"
                   : "border-gray-200 bg-gray-50/60 hover:border-guinda-200"
-              }`}>
+              }`}
+              style={consented ? { background: "linear-gradient(135deg,#fdf1f4 0%,#fef9fa 100%)" } : {}}>
               <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
-                consented ? "bg-guinda-700 border-guinda-700" : "border-gray-300 bg-white"
-              }`}>
+                consented ? "border-transparent" : "border-gray-300 bg-white"
+              }`}
+              style={consented ? { background: "linear-gradient(135deg,#8b1438 0%,#6e112c 100%)" } : {}}>
                 {consented && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
               </div>
               <input
@@ -1515,20 +1554,22 @@ export default function Home() {
         <div className="max-w-2xl mx-auto flex gap-3">
           {step > 1 ? (
             <button type="button" onClick={prevStep}
-              className="flex items-center gap-1.5 px-5 py-3.5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-guinda-300 hover:text-guinda-700 font-semibold text-sm transition-all shrink-0">
-              <ChevronLeft className="w-4 h-4" strokeWidth={2} /> Anterior
+              className="flex items-center gap-1.5 px-5 py-3.5 rounded-2xl border-2 border-guinda-100 bg-white text-guinda-700 hover:border-guinda-300 hover:bg-guinda-50 font-bold text-sm transition-all shrink-0 active:scale-[.97]">
+              <ChevronLeft className="w-4 h-4" strokeWidth={2.5} /> Anterior
             </button>
           ) : <div />}
 
           {step < TOTAL_STEPS ? (
             <button type="button" onClick={nextStep} disabled={compressing}
-              className="flex-1 bg-guinda-700 hover:bg-guinda-800 disabled:opacity-60 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+              className="flex-1 disabled:opacity-60 active:scale-[.97] text-white font-bold py-3.5 rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
+              style={{ background: "linear-gradient(135deg,#8b1438 0%,#6e112c 60%,#530d21 100%)", boxShadow: "0 4px 14px rgba(110,17,44,0.4)" }}>
               {compressing ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Procesando foto…</> : "Siguiente →"}
             </button>
           ) : (
             <div className="flex-1 flex flex-col gap-1.5">
               <button type="button" onClick={submit} disabled={loading || compressing || !consented}
-                className="w-full bg-guinda-700 hover:bg-guinda-800 disabled:opacity-50 active:scale-[.98] text-white font-bold py-3.5 rounded-2xl text-sm shadow-sm transition-all flex items-center justify-center gap-2">
+                className="w-full disabled:opacity-50 active:scale-[.97] text-white font-bold py-3.5 rounded-2xl text-sm transition-all flex items-center justify-center gap-2"
+                style={!loading && !compressing && consented ? { background: "linear-gradient(135deg,#8b1438 0%,#6e112c 60%,#530d21 100%)", boxShadow: "0 4px 14px rgba(110,17,44,0.4)" } : { background: "#9ca3af" }}>
                 {loading
                   ? <><Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} /> Enviando…</>
                   : "Enviar solicitud"}
@@ -1556,9 +1597,9 @@ export default function Home() {
 function Card({ title, children, hasError }: { title: string; children: React.ReactNode; hasError?: boolean }) {
   return (
     <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${hasError ? "border-red-200" : "border-gray-100"}`}>
-      <div className={`flex items-center gap-3 px-5 py-3.5 border-b ${hasError ? "border-red-100 bg-red-50/40" : "border-gray-100 bg-gray-50/70"}`}>
-        <p className="text-sm font-semibold text-gray-700 flex-1">{title}</p>
-        <span className="text-guinda-400 font-bold text-base leading-none">*</span>
+      <div className={`flex items-center gap-3 px-5 py-3.5 border-b ${hasError ? "border-red-100 bg-red-50/40" : "border-gray-50 bg-gradient-to-r from-gray-50 to-white"}`}>
+        <p className="text-sm font-bold text-gray-700 flex-1">{title}</p>
+        <span className="text-guinda-500 font-black text-base leading-none">*</span>
       </div>
       <div className="px-5 py-4">{children}</div>
     </div>
@@ -1584,7 +1625,7 @@ function TextInput({ placeholder, value, onChange, error, inputMode, suffix, aut
         <input type="text" inputMode={inputMode} placeholder={placeholder} value={value}
           onChange={(e) => onChange(e.target.value)}
           autoCapitalize={autoCapitalize} autoCorrect={autoCorrect} spellCheck={spellCheck} autoComplete={autoComplete}
-          className={`w-full border rounded-xl px-4 py-3 text-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent transition-all placeholder:text-gray-400 ${suffix ? "pr-12" : ""} ${error ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50/50 focus:bg-white"}`}
+          className={`w-full border-2 rounded-xl px-4 py-3 text-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-guinda-300/60 focus:border-guinda-500 transition-all placeholder:text-gray-400 ${suffix ? "pr-12" : ""} ${error ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50/60 focus:bg-white"}`}
         />
         {suffix && (
           <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-semibold text-guinda-500">
@@ -1605,7 +1646,7 @@ function SelectInput({ options, value, onChange, placeholder, error }: {
     <>
       <div className="relative">
         <select value={value} onChange={(e) => onChange(e.target.value)}
-          className={`w-full border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-guinda-500 focus:border-transparent transition-all appearance-none pr-10 ${error ? "border-red-300 bg-red-50 text-gray-800" : "border-gray-200 bg-gray-50/50 focus:bg-white text-gray-800"} ${!value ? "text-gray-400" : ""}`}>
+          className={`w-full border-2 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-guinda-300/60 focus:border-guinda-500 transition-all appearance-none pr-10 ${error ? "border-red-300 bg-red-50 text-gray-800" : "border-gray-200 bg-gray-50/60 focus:bg-white text-gray-800"} ${!value ? "text-gray-400" : ""}`}>
           <option value="" disabled>{placeholder}</option>
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -1628,10 +1669,11 @@ function RadioGroup({ options, value, onChange, error }: {
         {options.map((o) => (
           <button key={o.value} type="button" onClick={() => onChange(o.value)}
             aria-pressed={value === o.value}
-            className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+            style={value === o.value ? { background: "linear-gradient(135deg,#8b1438 0%,#6e112c 60%,#530d21 100%)", boxShadow: "0 3px 10px rgba(110,17,44,0.35)" } : {}}
+            className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 text-sm font-bold transition-all active:scale-[.97] ${
               value === o.value
-                ? "border-guinda-700 bg-guinda-700 text-white shadow-sm"
-                : "border-gray-200 bg-gray-50 text-gray-500 hover:border-guinda-300 hover:bg-guinda-50 hover:text-guinda-700"
+                ? "border-transparent text-white"
+                : "border-gray-200 bg-gray-50/80 text-gray-500 hover:border-guinda-200 hover:bg-guinda-50 hover:text-guinda-700"
             }`}>
             {o.icon}{o.label}
           </button>
@@ -1665,8 +1707,8 @@ function PhotoUpload({ label, icon, preview, inputId, onChange, error }: {
       <input id={camId} type="file" accept="image/*" capture="environment" className="hidden" onChange={handle} />
       <input id={galId} type="file" accept="image/*"                       className="hidden" onChange={handle} />
 
-      <div className={`border-2 border-dashed rounded-2xl overflow-hidden h-40 flex flex-col ${
-        error ? "border-red-300 bg-red-50/60" : preview ? "border-guinda-300" : "border-gray-200 bg-gray-50/60"
+      <div className={`border-2 border-dashed rounded-2xl overflow-hidden h-40 flex flex-col transition-all ${
+        error ? "border-red-300 bg-red-50/60" : preview ? "border-guinda-300" : "border-guinda-100 bg-gradient-to-b from-guinda-50/40 to-white hover:border-guinda-300 hover:from-guinda-50"
       }`}>
         {preview ? (
           <div className="relative flex-1">
@@ -1691,8 +1733,8 @@ function PhotoUpload({ label, icon, preview, inputId, onChange, error }: {
         ) : (
           <div className="flex flex-col items-center justify-between flex-1 py-3 px-2">
             <div className="flex flex-col items-center gap-1.5 flex-1 justify-center">
-              <div className="w-9 h-9 rounded-xl bg-guinda-100 flex items-center justify-center">{icon}</div>
-              <p className="text-[11px] text-gray-500 font-medium text-center leading-tight">{label}</p>
+              <div className="w-11 h-11 rounded-2xl bg-white shadow-sm border border-guinda-100 flex items-center justify-center">{icon}</div>
+              <p className="text-[11px] text-guinda-600 font-semibold text-center leading-tight">{label}</p>
             </div>
             <div className="flex gap-1.5 w-full mt-2">
               <label htmlFor={camId}
